@@ -1,0 +1,129 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router'
+import { GraduationCap, LogIn, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
+import { useStore } from '@/store/AppStore'
+import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+
+export default function Login() {
+  const { t, lang, setLang } = useI18n()
+  const { state, dispatch } = useStore()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    setLoading(true)
+    setError(false)
+    // simulate a short auth round-trip
+    setTimeout(() => {
+      const user = state.users.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password && u.active,
+      )
+      if (user) {
+        dispatch({ type: 'LOGIN', userId: user.id })
+        toast.success(`${t('auth.signin')} ✓ — ${user.name}`)
+        navigate('/', { replace: true })
+      } else {
+        setError(true)
+        setLoading(false)
+      }
+    }, 450)
+  }
+
+  const quick = (emailAddr: string, pass: string) => {
+    setEmail(emailAddr)
+    setPassword(pass)
+    setError(false)
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--sidebar-background))] p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsl(var(--sidebar-primary))] shadow-xl">
+            <GraduationCap className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-black text-white">{t('app.name')}</h1>
+          <p className="mt-1 text-sm text-white/60">{t('app.tagline')}</p>
+        </div>
+
+        <Card className="border-0 shadow-2xl">
+          <CardContent className="p-6 sm:p-8">
+            <h2 className="text-xl font-extrabold">{t('auth.title')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('auth.subtitle')}</p>
+
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold">{t('common.email')}</label>
+                <Input
+                  type="email" dir="ltr" className="min-h-[44px] text-start"
+                  placeholder="admin@markazi.com" value={email}
+                  onChange={(e) => setEmail(e.target.value)} required autoComplete="username"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold">{t('auth.password')}</label>
+                <Input
+                  type="password" dir="ltr" className="min-h-[44px] text-start"
+                  placeholder="••••••••" value={password}
+                  onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password"
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm font-bold text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {t('auth.error')}
+                </div>
+              )}
+
+              <Button type="submit" className="min-h-[44px] w-full text-base font-bold" disabled={loading}>
+                {loading ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <>
+                    <LogIn className="me-2 h-4 w-4" />
+                    {t('auth.signin')}
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 border-t pt-4">
+              <div className="mb-2 text-xs font-bold text-muted-foreground">{t('auth.demo')}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => quick('admin@markazi.com', 'admin123')}
+                  className="rounded-lg border bg-muted/50 px-3 py-2.5 text-start transition-colors hover:bg-muted"
+                >
+                  <div className="text-xs font-extrabold">{t('auth.role.admin')}</div>
+                  <div className="text-[11px] text-muted-foreground" dir="ltr">admin@markazi.com</div>
+                </button>
+                <button
+                  onClick={() => quick('reception@markazi.com', 'reception123')}
+                  className="rounded-lg border bg-muted/50 px-3 py-2.5 text-start transition-colors hover:bg-muted"
+                >
+                  <div className="text-xs font-extrabold">{t('auth.role.reception')}</div>
+                  <div className="text-[11px] text-muted-foreground" dir="ltr">reception@markazi.com</div>
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-6 text-center">
+          <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="min-h-[44px] px-4 text-sm font-bold text-white/70 hover:text-white">
+            {lang === 'ar' ? 'English' : 'العربية'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
