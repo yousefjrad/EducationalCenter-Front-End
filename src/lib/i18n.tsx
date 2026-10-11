@@ -70,6 +70,7 @@ export const dict: Dict = {
   'nav.sections': { ar: 'الشعب', en: 'Sections' },
   'nav.schedule': { ar: 'الجدول الأسبوعي', en: 'Weekly Schedule' },
   'nav.students': { ar: 'الطلاب', en: 'Students' },
+  'nav.enrollments': { ar: '\u0627\u0644\u062a\u0633\u062c\u064a\u0644\u0627\u062a', en: 'Enrollments' },
   'nav.trainers': { ar: 'المدربون', en: 'Trainers' },
   'nav.payments': { ar: 'الدفعات', en: 'Payments' },
   'nav.attendance': { ar: 'الحضور', en: 'Attendance' },

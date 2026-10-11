@@ -10,6 +10,7 @@ import Courses from '@/pages/Courses'
 import Sections from '@/pages/Sections'
 import Schedule from '@/pages/Schedule'
 import Students from '@/pages/Students'
+import Enrollments from '@/pages/Enrollments'
 import Trainers from '@/pages/Trainers'
 import Payments from '@/pages/Payments'
 import AttendancePage from '@/pages/Attendance'
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="/sections" element={<Sections />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/students" element={<Students />} />
+              <Route path="/enrollments" element={<Enrollments />} />
               <Route path="/trainers" element={<Trainers />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/attendance" element={<AttendancePage />} />

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import {
-  LayoutDashboard, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
+  LayoutDashboard, ClipboardList, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
   Wallet, ClipboardCheck, Award, ReceiptText, BarChart3, ShieldCheck,
   ScrollText, Settings as SettingsIcon, Bell, LogOut, Menu, Languages, X,
 } from 'lucide-react'
@@ -44,6 +44,7 @@ const NAV: NavGroup[] = [
       { to: '/sections', labelKey: 'nav.sections', icon: Layers, perm: 'Sections.View' },
       { to: '/schedule', labelKey: 'nav.schedule', icon: CalendarDays, perm: 'Sections.View' },
       { to: '/students', labelKey: 'nav.students', icon: GraduationCap, perm: 'Students.View' },
+      { to: '/enrollments', labelKey: 'nav.enrollments', icon: ClipboardList, perm: 'Enrollments.Manage' },
       { to: '/trainers', labelKey: 'nav.trainers', icon: Users2, perm: 'Trainers.View' },
       { to: '/attendance', labelKey: 'nav.attendance', icon: ClipboardCheck, perm: 'Attendance.Manage' },
       { to: '/certificates', labelKey: 'nav.certificates', icon: Award, perm: 'Grades.Manage' },
