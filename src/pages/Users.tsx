@@ -1,260 +1,404 @@
-import { useState } from 'react'
-import { ShieldCheck, Plus, Pencil, Trash2, Lock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { KeyRound, Loader2, Pencil, Plus, ShieldCheck, Trash2, Unlock } from 'lucide-react'
 import { toast } from 'sonner'
-import { useStore } from '@/store/AppStore'
-import { useI18n } from '@/lib/i18n'
-import type { PermissionKey, Role, User } from '@/types'
-import { PageHeader, EmptyState, Pill, Field, TableScroll, Th, Td } from '@/components/shared'
+import { PageHeader, Pill } from '@/components/shared'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ApiError } from '@/services/api'
+import {
+  rolesApi, usersApi,
+  type PermissionGroupDto, type RoleDto, type UserDto,
+} from '@/services/users'
 
-const PERM_GROUPS: { key: string; perms: PermissionKey[] }[] = [
-  { key: 'perm.group.academic', perms: ['Dashboard.View', 'Courses.View', 'Courses.Manage', 'Sections.View', 'Sections.Manage', 'Trainers.View', 'Trainers.Manage'] },
-  { key: 'perm.group.students', perms: ['Students.View', 'Students.Manage', 'Enrollments.Manage'] },
-  { key: 'perm.group.finance', perms: ['Payments.View', 'Payments.Create', 'Payments.Void', 'Expenses.Manage', 'Payroll.Manage'] },
-  { key: 'perm.group.ops', perms: ['Attendance.Manage', 'Grades.Manage', 'Certificates.Issue', 'Certificates.Override', 'Reports.View'] },
-  { key: 'perm.group.system', perms: ['Users.Manage', 'Audit.View', 'Settings.Manage'] },
-]
+const L = {
+  title: '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0648\u0646 \u0648\u0627\u0644\u0623\u062f\u0648\u0627\u0631',
+  subtitle: '\u0625\u062f\u0627\u0631\u0629 \u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646 \u0648\u0635\u0644\u0627\u062d\u064a\u0627\u062a \u0627\u0644\u0623\u062f\u0648\u0627\u0631',
+  tabUsers: '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0648\u0646',
+  tabRoles: '\u0627\u0644\u0623\u062f\u0648\u0627\u0631',
+  search: '\u0628\u062d\u062b \u0628\u0627\u0644\u0627\u0633\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f',
+  allRoles: '\u0643\u0644 \u0627\u0644\u0623\u062f\u0648\u0627\u0631',
+  allStatus: '\u0643\u0644 \u0627\u0644\u062d\u0627\u0644\u0627\u062a',
+  active: '\u0646\u0634\u0637',
+  inactive: '\u0645\u0639\u0637\u0651\u0644',
+  addUser: '\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062a\u062e\u062f\u0645',
+  editUser: '\u062a\u0639\u062f\u064a\u0644 \u0645\u0633\u062a\u062e\u062f\u0645',
+  name: '\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644',
+  email: '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a',
+  password: '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+  role: '\u0627\u0644\u062f\u0648\u0631',
+  pickRole: '\u0627\u062e\u062a\u0631 \u062f\u0648\u0631\u0627\u064b',
+  status: '\u0627\u0644\u062d\u0627\u0644\u0629',
+  lastLogin: '\u0622\u062e\u0631 \u062f\u062e\u0648\u0644',
+  locked: '\u0645\u0642\u0641\u0644',
+  unlock: '\u0641\u0643 \u0627\u0644\u0642\u0641\u0644',
+  resetPwd: '\u0625\u0639\u0627\u062f\u0629 \u062a\u0639\u064a\u064a\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+  newPwd: '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629',
+  resetNote: '\u0633\u064a\u062a\u0645 \u0625\u0646\u0647\u0627\u0621 \u062c\u0644\u0633\u0627\u062a \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645.',
+  noDeleteUser: '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0648\u0646 \u0644\u0627 \u064a\u064f\u062d\u0630\u0641\u0648\u0646\u060c \u0639\u0637\u0651\u0644 \u0627\u0644\u062d\u0633\u0627\u0628 \u0628\u062f\u0644\u0627\u064b \u0645\u0646 \u0630\u0644\u0643.',
+  empty: '\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a',
+  save: '\u062d\u0641\u0638',
+  back: '\u0631\u062c\u0648\u0639',
+  confirm: '\u062a\u0623\u0643\u064a\u062f',
+  saved: '\u062a\u0645 \u0627\u0644\u062d\u0641\u0638',
+  prev: '\u0627\u0644\u0633\u0627\u0628\u0642',
+  next: '\u0627\u0644\u062a\u0627\u0644\u064a',
+  page: '\u0635\u0641\u062d\u0629',
+  addRole: '\u0625\u0636\u0627\u0641\u0629 \u062f\u0648\u0631',
+  editRole: '\u062a\u0639\u062f\u064a\u0644 \u062f\u0648\u0631',
+  viewRole: '\u0639\u0631\u0636 \u062f\u0648\u0631',
+  roleName: '\u0627\u0633\u0645 \u0627\u0644\u062f\u0648\u0631',
+  roleDesc: '\u0627\u0644\u0648\u0635\u0641',
+  system: '\u0646\u0638\u0627\u0645\u064a',
+  perms: '\u0635\u0644\u0627\u062d\u064a\u0629',
+  edit: '\u062a\u0639\u062f\u064a\u0644',
+  view: '\u0639\u0631\u0636',
+  adminLocked: '\u062f\u0648\u0631 \u0627\u0644\u0645\u062f\u064a\u0631 \u0644\u0627 \u064a\u0645\u0643\u0646 \u062a\u0639\u062f\u064a\u0644\u0647.',
+  sysName: '\u0627\u0644\u0623\u062f\u0648\u0627\u0631 \u0627\u0644\u0646\u0638\u0627\u0645\u064a\u0629 \u062a\u062d\u062a\u0641\u0638 \u0628\u0627\u0633\u0645\u0647\u0627.',
+  needPerm: '\u0627\u062e\u062a\u0631 \u0635\u0644\u0627\u062d\u064a\u0629 \u0648\u0627\u062d\u062f\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644.',
+  delRole: '\u062d\u0630\u0641 \u062f\u0648\u0631',
+  delConfirm: '\u0647\u0644 \u062a\u0631\u064a\u062f \u062d\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u062f\u0648\u0631\u061f',
+  deleted: '\u062a\u0645 \u0627\u0644\u062d\u0630\u0641',
+  unlocked: '\u062a\u0645 \u0641\u0643 \u0627\u0644\u0642\u0641\u0644',
+  pwdDone: '\u062a\u0645 \u062a\u0639\u064a\u064a\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+  err: '\u062d\u062f\u062b \u062e\u0637\u0623 \u063a\u064a\u0631 \u0645\u062a\u0648\u0642\u0639',
+}
+
+const PAGE_SIZE = 20
+const field = 'h-10 w-full rounded-md border bg-background px-3 text-sm'
+const th = 'border-b bg-muted/70 px-3 py-2.5 text-start text-xs font-bold text-muted-foreground'
+const td = 'border-b px-3 py-2.5 text-sm'
+const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : L.err)
+const pagesOf = (t: number) => Math.max(1, Math.ceil(t / PAGE_SIZE))
+const fmtDt = (s: string | null) => (s ? s.replace('T', ' ').slice(0, 16) : '-')
+const isLocked = (u: UserDto) => !!u.lockedUntil && new Date(u.lockedUntil).getTime() > Date.now()
 
 export default function Users() {
-  const { t, lang } = useI18n()
-  const { state, dispatch } = useStore()
-  const [editUser, setEditUser] = useState<User | 'new' | null>(null)
-  const [editRole, setEditRole] = useState<Role | 'new' | null>(null)
+  const [tab, setTab] = useState('users')
+  const [roles, setRoles] = useState<RoleDto[]>([])
+  const [rolesKey, setRolesKey] = useState(0)
+  const [rolesLoading, setRolesLoading] = useState(true)
+  const [rolesError, setRolesError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    setRolesLoading(true)
+    rolesApi
+      .list()
+      .then((r) => { if (alive) { setRoles(r); setRolesError('') } })
+      .catch((e) => { if (alive) setRolesError(errMsg(e)) })
+      .finally(() => { if (alive) setRolesLoading(false) })
+    return () => { alive = false }
+  }, [rolesKey])
 
   return (
     <div>
-      <PageHeader title={t('users.title')} subtitle={t('users.subtitle')} />
-
-      <Tabs defaultValue="users">
+      <PageHeader title={L.title} subtitle={L.subtitle} />
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="users" className="min-h-[44px]">{t('users.tab.users')}</TabsTrigger>
-          <TabsTrigger value="roles" className="min-h-[44px]">{t('users.tab.roles')}</TabsTrigger>
+          <TabsTrigger value="users" className="min-h-[44px]">{L.tabUsers}</TabsTrigger>
+          <TabsTrigger value="roles" className="min-h-[44px]">{L.tabRoles}</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="users">
-          <div className="mb-4 flex justify-end">
-            <Button className="min-h-[44px]" onClick={() => setEditUser('new')}>
-              <Plus className="me-2 h-4 w-4" />{t('users.add')}
-            </Button>
-          </div>
-          {state.users.length === 0 ? (
-            <EmptyState message={t('users.empty')} />
-          ) : (
-            <TableScroll>
-              <table className="w-full min-w-[640px]">
-                <thead>
-                  <tr><Th>{t('common.name')}</Th><Th>{t('common.email')}</Th><Th>{t('users.role')}</Th><Th>{t('common.status')}</Th><Th></Th></tr>
-                </thead>
-                <tbody>
-                  {state.users.map((u) => {
-                    const role = state.roles.find((r) => r.id === u.roleId)
-                    return (
-                      <tr key={u.id} className="border-b last:border-0 hover:bg-muted/40">
-                        <Td className="font-bold">{u.name}</Td>
-                        <Td><span className="tnum text-muted-foreground" dir="ltr">{u.email}</span></Td>
-                        <Td><Pill tone={role?.builtin ? 'purple' : 'teal'}>{lang === 'ar' ? role?.name : role?.nameEn}</Pill></Td>
-                        <Td>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={u.active}
-                              onCheckedChange={(v) => dispatch({ type: 'SAVE_USER', user: { ...u, active: v } })}
-                              disabled={u.id === state.currentUserId}
-                            />
-                            <span className="text-xs text-muted-foreground">{u.active ? t('common.active') : t('common.inactive')}</span>
-                          </div>
-                        </Td>
-                        <Td>
-                          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditUser(u)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </Td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </TableScroll>
-          )}
-        </TabsContent>
-
+        <TabsContent value="users"><UsersTab roles={roles} /></TabsContent>
         <TabsContent value="roles">
-          <div className="mb-4 flex justify-end">
-            <Button className="min-h-[44px]" onClick={() => setEditRole('new')}>
-              <Plus className="me-2 h-4 w-4" />{t('users.addRole')}
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {state.roles.map((r) => {
-              const usersCount = state.users.filter((u) => u.roleId === r.id).length
-              return (
-                <div key={r.id} className="rounded-xl border bg-card p-5 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2 font-extrabold">
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                        {lang === 'ar' ? r.name : r.nameEn}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">{r.permissions.length} {t('users.permissions')}</div>
-                    </div>
-                    {r.builtin && <Pill tone="purple"><Lock className="h-3 w-3" />{t('users.builtin')}</Pill>}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {r.permissions.slice(0, 5).map((p) => (
-                      <span key={p} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground" dir="ltr">{p}</span>
-                    ))}
-                    {r.permissions.length > 5 && <span className="text-[10px] text-muted-foreground">+{r.permissions.length - 5}</span>}
-                  </div>
-                  <div className="mt-4 flex items-center justify-between border-t pt-3">
-                    <span className="tnum text-xs text-muted-foreground">{usersCount} {t('users.tab.users')}</span>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="min-h-[36px]" onClick={() => setEditRole(r)}>
-                        {r.id === 1 ? t('common.view') : t('common.edit')}
-                      </Button>
-                      {!r.builtin && (
-                        <Button
-                          variant="ghost" size="icon" className="h-9 w-9 text-destructive"
-                          onClick={() => {
-                            if (usersCount > 0) { toast.error(t('users.roleInUse')); return }
-                            dispatch({ type: 'DELETE_ROLE', id: r.id })
-                            toast.success(t('common.deleted'))
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <RolesTab roles={roles} loading={rolesLoading} error={rolesError} onChanged={() => setRolesKey((k) => k + 1)} />
         </TabsContent>
       </Tabs>
-
-      <UserDialog target={editUser} onClose={() => setEditUser(null)} />
-      <RoleDialog target={editRole} onClose={() => setEditRole(null)} />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
 
-function UserDialog({ target, onClose }: { target: User | 'new' | null; onClose: () => void }) {
-  const { t } = useI18n()
-  const { state, dispatch } = useStore()
-  const editing = target !== 'new' ? target : null
-  const [name, setName] = useState(editing?.name ?? '')
-  const [email, setEmail] = useState(editing?.email ?? '')
-  const [password, setPassword] = useState(editing?.password ?? '')
-  const [roleId, setRoleId] = useState(String(editing?.roleId ?? ''))
+function UsersTab({ roles }: { roles: RoleDto[] }) {
+  const [items, setItems] = useState<UserDto[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
+  const [search, setSearch] = useState('')
+  const [roleF, setRoleF] = useState('')
+  const [actF, setActF] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [busy, setBusy] = useState(false)
 
-  const save = () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !roleId) { toast.error(t('common.required')); return }
-    dispatch({
-      type: 'SAVE_USER',
-      user: editing
-        ? { ...editing, name: name.trim(), email: email.trim(), password, roleId: Number(roleId) }
-        : { id: 0, name: name.trim(), email: email.trim(), password, roleId: Number(roleId), active: true, createdAt: new Date().toISOString().slice(0, 10) },
-    })
-    toast.success(t('common.saved'))
-    onClose()
+  const [dlg, setDlg] = useState<UserDto | 'new' | null>(null)
+  const [fName, setFName] = useState('')
+  const [fEmail, setFEmail] = useState('')
+  const [fPwd, setFPwd] = useState('')
+  const [fRole, setFRole] = useState('')
+  const [fActive, setFActive] = useState(true)
+  const [resetFor, setResetFor] = useState<UserDto | null>(null)
+  const [newPwd, setNewPwd] = useState('')
+
+  useEffect(() => {
+    const id = setTimeout(() => { setSearch(q.trim()); setPage(1) }, 350)
+    return () => clearTimeout(id)
+  }, [q])
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    usersApi
+      .list({
+        search: search || undefined, roleId: roleF ? Number(roleF) : undefined,
+        isActive: actF === '' ? undefined : actF === '1', page, pageSize: PAGE_SIZE,
+      })
+      .then((r) => { if (alive) { setItems(r.items); setTotal(r.totalCount ?? r.total ?? r.items.length) } })
+      .catch((e) => { if (alive) toast.error(errMsg(e)) })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [search, roleF, actF, page, reloadKey])
+
+  const act = async (fn: () => Promise<unknown>, ok: string, after?: () => void) => {
+    setBusy(true)
+    try {
+      await fn()
+      toast.success(ok)
+      after?.()
+      setReloadKey((k) => k + 1)
+    } catch (e) {
+      toast.error(errMsg(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
+  const open = (x: UserDto | 'new') => {
+    setDlg(x)
+    if (x === 'new') { setFName(''); setFEmail(''); setFPwd(''); setFRole(''); setFActive(true) }
+    else { setFName(x.fullName); setFEmail(x.email); setFPwd(''); setFRole(String(x.roleId)); setFActive(x.isActive) }
+  }
+  const valid = fName.trim() && fEmail.trim() && fRole && (dlg !== 'new' || fPwd)
+  const save = () =>
+    act(
+      () =>
+        dlg === 'new' || dlg === null
+          ? usersApi.create({ fullName: fName.trim(), email: fEmail.trim(), password: fPwd, roleId: Number(fRole) })
+          : usersApi.update(dlg.id, { fullName: fName.trim(), email: fEmail.trim(), roleId: Number(fRole), isActive: fActive }),
+      L.saved, () => setDlg(null),
+    )
+  const toggleActive = (u: UserDto) =>
+    act(() => usersApi.update(u.id, { fullName: u.fullName, email: u.email, roleId: u.roleId, isActive: !u.isActive }), L.saved)
+
   return (
-    <Dialog open={target !== null} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{editing ? t('users.edit') : t('users.add')}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <Field label={t('common.name')} required><Input className="min-h-[44px]" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-          <Field label={t('common.email')} required><Input type="email" dir="ltr" className="min-h-[44px]" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-          <Field label={t('users.passwordHint')} required><Input dir="ltr" className="min-h-[44px]" value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
-          <Field label={t('users.role')} required>
-            <Select value={roleId} onValueChange={setRoleId}>
-              <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>
-                {state.roles.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
+    <div>
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
+        <input className={field} placeholder={L.search} value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className={field} value={roleF} onChange={(e) => { setRoleF(e.target.value); setPage(1) }}>
+          <option value="">{L.allRoles}</option>
+          {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+        <select className={field} value={actF} onChange={(e) => { setActF(e.target.value); setPage(1) }}>
+          <option value="">{L.allStatus}</option>
+          <option value="1">{L.active}</option>
+          <option value="0">{L.inactive}</option>
+        </select>
+        <Button className="min-h-[40px]" onClick={() => open('new')}><Plus className="me-2 h-4 w-4" />{L.addUser}</Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : items.length === 0 ? (
+        <div className="py-12 text-center text-sm text-muted-foreground">{L.empty}</div>
+      ) : (
+        <div className="scrollbar-thin overflow-x-auto rounded-xl border bg-card shadow-sm">
+          <table className="w-full min-w-[820px] border-collapse">
+            <thead>
+              <tr>
+                <th className={th}>{L.name}</th><th className={th}>{L.email}</th><th className={th}>{L.role}</th>
+                <th className={th}>{L.status}</th><th className={th}>{L.lastLogin}</th><th className={th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((u) => (
+                <tr key={u.id}>
+                  <td className={td}><b>{u.fullName}</b></td>
+                  <td className={td}><span className="tnum text-muted-foreground" dir="ltr">{u.email}</span></td>
+                  <td className={td}><Pill tone="teal">{u.roleName}</Pill></td>
+                  <td className={td}>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input type="checkbox" className="h-4 w-4" checked={u.isActive} disabled={busy} onChange={() => toggleActive(u)} />
+                      <span className="text-xs text-muted-foreground">{u.isActive ? L.active : L.inactive}</span>
+                    </label>
+                    {isLocked(u) && <Pill tone="red" className="mt-1">{L.locked}</Pill>}
+                  </td>
+                  <td className={td}><span className="tnum text-xs text-muted-foreground">{fmtDt(u.lastLoginAt)}</span></td>
+                  <td className={td}>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9" title={L.editUser} onClick={() => open(u)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" title={L.resetPwd} onClick={() => { setResetFor(u); setNewPwd('') }}><KeyRound className="h-4 w-4" /></Button>
+                      {isLocked(u) && (
+                        <Button variant="ghost" size="icon" className="h-9 w-9" title={L.unlock} disabled={busy} onClick={() => act(() => usersApi.unlock(u.id), L.unlocked)}><Unlock className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" className="min-h-[44px]" onClick={onClose}>{t('common.cancel')}</Button>
-          <Button className="min-h-[44px]" onClick={save}>{t('common.save')}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+      <div className="mt-2 text-center text-xs text-muted-foreground">{L.noDeleteUser}</div>
+      <div className="mt-3 flex items-center justify-center gap-3 text-sm">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{L.prev}</Button>
+        <span className="tnum">{L.page} {page} / {pagesOf(total)}</span>
+        <Button variant="outline" size="sm" disabled={page >= pagesOf(total)} onClick={() => setPage(page + 1)}>{L.next}</Button>
+      </div>
+
+      {/* add / edit */}
+      <Dialog open={dlg !== null} onOpenChange={(o) => { if (!o) setDlg(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{dlg === 'new' ? L.addUser : L.editUser}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <input className={field} placeholder={L.name} value={fName} onChange={(e) => setFName(e.target.value)} />
+            <input type="email" dir="ltr" className={field} placeholder={L.email} value={fEmail} onChange={(e) => setFEmail(e.target.value)} />
+            {dlg === 'new' && <input type="password" dir="ltr" className={field} placeholder={L.password} value={fPwd} onChange={(e) => setFPwd(e.target.value)} />}
+            <select className={field} value={fRole} onChange={(e) => setFRole(e.target.value)}>
+              <option value="">{L.pickRole}</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            {dlg !== 'new' && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4" checked={fActive} onChange={(e) => setFActive(e.target.checked)} />{L.active}
+              </label>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDlg(null)}>{L.back}</Button>
+            <Button disabled={busy || !valid} onClick={save}>{busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{L.save}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* reset password */}
+      <Dialog open={!!resetFor} onOpenChange={(o) => { if (!o) setResetFor(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{L.resetPwd}</DialogTitle></DialogHeader>
+          {resetFor && <div className="text-sm"><b>{resetFor.fullName}</b><div className="text-xs text-muted-foreground">{L.resetNote}</div></div>}
+          <input type="password" dir="ltr" className={field} placeholder={L.newPwd} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setResetFor(null)}>{L.back}</Button>
+            <Button disabled={busy || !newPwd} onClick={() => resetFor && act(() => usersApi.resetPassword(resetFor.id, newPwd), L.pwdDone, () => setResetFor(null))}>{L.confirm}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 
 // ---------------------------------------------------------------------------
 
-function RoleDialog({ target, onClose }: { target: Role | 'new' | null; onClose: () => void }) {
-  const { t } = useI18n()
-  const { dispatch } = useStore()
-  const editing = target !== 'new' ? target : null
-  const isAdminRole = editing?.id === 1
-  const [name, setName] = useState(editing?.name ?? '')
-  const [nameEn, setNameEn] = useState(editing?.nameEn ?? '')
-  const [perms, setPerms] = useState<PermissionKey[]>(editing?.permissions ?? [])
+function RolesTab({ roles, loading, error, onChanged }: { roles: RoleDto[]; loading: boolean; error: string; onChanged: () => void }) {
+  const [groups, setGroups] = useState<PermissionGroupDto[]>([])
+  const [busy, setBusy] = useState(false)
+  const [dlg, setDlg] = useState<RoleDto | 'new' | null>(null)
+  const [name, setName] = useState('')
+  const [desc, setDesc] = useState('')
+  const [sel, setSel] = useState<string[]>([])
+  const [delFor, setDelFor] = useState<RoleDto | null>(null)
 
-  const toggle = (p: PermissionKey) =>
-    setPerms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]))
+  useEffect(() => {
+    rolesApi.permissions().then(setGroups).catch(() => { /* shown when opening */ })
+  }, [])
 
+  const editing = dlg !== null && dlg !== 'new' ? dlg : null
+  const isAdmin = editing?.name === 'Admin'
+  const nameLocked = !!editing?.isSystem
+
+  const open = (r: RoleDto | 'new') => {
+    setDlg(r)
+    if (r === 'new') { setName(''); setDesc(''); setSel([]) }
+    else { setName(r.name); setDesc(r.description ?? ''); setSel(r.permissions) }
+  }
+  const toggle = (p: string) => setSel((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]))
+
+  const act = async (fn: () => Promise<unknown>, ok: string, after: () => void) => {
+    setBusy(true)
+    try { await fn(); toast.success(ok); after(); onChanged() } catch (e) { toast.error(errMsg(e)) } finally { setBusy(false) }
+  }
   const save = () => {
-    if (!name.trim()) { toast.error(t('common.required')); return }
-    dispatch({
-      type: 'SAVE_ROLE',
-      role: editing
-        ? { ...editing, name: name.trim(), nameEn: nameEn.trim(), permissions: perms }
-        : { id: 0, name: name.trim(), nameEn: nameEn.trim(), builtin: false, permissions: perms },
-    })
-    toast.success(t('common.saved'))
-    onClose()
+    const body = { name: name.trim(), description: desc.trim() || null, permissionNames: sel }
+    return act(() => (editing ? rolesApi.update(editing.id, body) : rolesApi.create(body)), L.saved, () => setDlg(null))
   }
 
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+  if (error) return <div className="py-8 text-center text-sm text-destructive">{error}</div>
+
   return (
-    <Dialog open={target !== null} onOpenChange={onClose}>
-      <DialogContent className="scrollbar-thin max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader><DialogTitle>{editing ? t('users.editRole') : t('users.addRole')}</DialogTitle></DialogHeader>
-        {isAdminRole && (
-          <div className="mb-3 rounded-lg bg-muted p-3 text-xs font-bold text-muted-foreground">{t('users.cantDeleteAdmin')}</div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('users.roleName')} required>
-            <Input className="min-h-[44px]" value={name} onChange={(e) => setName(e.target.value)} disabled={isAdminRole} />
-          </Field>
-          <Field label={t('users.roleNameEn')}>
-            <Input dir="ltr" className="min-h-[44px]" value={nameEn} onChange={(e) => setNameEn(e.target.value)} disabled={isAdminRole} />
-          </Field>
-        </div>
-
-        <div className="mt-4 space-y-4">
-          {PERM_GROUPS.map((g) => (
-            <div key={g.key} className="rounded-xl border p-4">
-              <div className="mb-3 text-sm font-extrabold">{t(g.key)}</div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {g.perms.map((p) => (
-                  <label key={p} className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-lg px-2 hover:bg-muted/60">
-                    <Checkbox checked={perms.includes(p)} onCheckedChange={() => toggle(p)} disabled={isAdminRole} />
-                    <span className="text-sm" dir="ltr">{p}</span>
-                  </label>
-                ))}
+    <div>
+      <div className="mb-3 flex justify-end">
+        <Button className="min-h-[40px]" onClick={() => open('new')}><Plus className="me-2 h-4 w-4" />{L.addRole}</Button>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {roles.map((r) => (
+          <div key={r.id} className="rounded-xl border bg-card p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 font-extrabold"><ShieldCheck className="h-4 w-4 text-primary" />{r.name}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{r.permissions.length} {L.perms}</div>
+                {r.description && <div className="mt-1 text-xs text-muted-foreground">{r.description}</div>}
               </div>
+              {r.isSystem && <Pill tone="purple">{L.system}</Pill>}
             </div>
-          ))}
-        </div>
+            <div className="mt-3 flex flex-wrap gap-1">
+              {r.permissions.slice(0, 5).map((p) => (
+                <span key={p} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground" dir="ltr">{p}</span>
+              ))}
+              {r.permissions.length > 5 && <span className="text-[10px] text-muted-foreground">+{r.permissions.length - 5}</span>}
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-1 border-t pt-3">
+              <Button variant="outline" size="sm" onClick={() => open(r)}>{r.name === 'Admin' ? L.view : L.edit}</Button>
+              {!r.isSystem && (
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => setDelFor(r)}><Trash2 className="h-4 w-4" /></Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <DialogFooter className="mt-4 gap-2">
-          <Button variant="outline" className="min-h-[44px]" onClick={onClose}>{t('common.close')}</Button>
-          {!isAdminRole && <Button className="min-h-[44px]" onClick={save}>{t('common.save')}</Button>}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <Dialog open={dlg !== null} onOpenChange={(o) => { if (!o) setDlg(null) }}>
+        <DialogContent className="scrollbar-thin max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader><DialogTitle>{dlg === 'new' ? L.addRole : isAdmin ? L.viewRole : L.editRole}</DialogTitle></DialogHeader>
+          {isAdmin && <div className="rounded-lg bg-muted p-3 text-xs font-bold text-muted-foreground">{L.adminLocked}</div>}
+          {!isAdmin && nameLocked && <div className="rounded-lg bg-muted p-3 text-xs font-bold text-muted-foreground">{L.sysName}</div>}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input className={field} placeholder={L.roleName} value={name} disabled={isAdmin || nameLocked} onChange={(e) => setName(e.target.value)} />
+            <input className={field} placeholder={L.roleDesc} value={desc} disabled={isAdmin} onChange={(e) => setDesc(e.target.value)} />
+          </div>
+          <div className="space-y-3">
+            {groups.map((g) => (
+              <div key={g.module} className="rounded-xl border p-3">
+                <div className="mb-2 text-sm font-extrabold" dir="ltr">{g.module}</div>
+                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                  {g.permissions.map((p) => (
+                    <label key={p} className="flex min-h-[36px] cursor-pointer items-center gap-2 rounded-md px-2 hover:bg-muted/60">
+                      <input type="checkbox" className="h-4 w-4" checked={sel.includes(p)} disabled={isAdmin} onChange={() => toggle(p)} />
+                      <span className="text-sm" dir="ltr">{p}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {!isAdmin && sel.length === 0 && <div className="text-xs text-muted-foreground">{L.needPerm}</div>}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDlg(null)}>{L.back}</Button>
+            {!isAdmin && <Button disabled={busy || !name.trim() || sel.length === 0} onClick={save}>{busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{L.save}</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!delFor} onOpenChange={(o) => { if (!o) setDelFor(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{L.delRole}</DialogTitle></DialogHeader>
+          <div className="text-sm">{L.delConfirm} <b>{delFor?.name}</b></div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDelFor(null)}>{L.back}</Button>
+            <Button variant="destructive" disabled={busy} onClick={() => delFor && act(() => rolesApi.remove(delFor.id), L.deleted, () => setDelFor(null))}>{L.confirm}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
