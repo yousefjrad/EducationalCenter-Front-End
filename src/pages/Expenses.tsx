@@ -1,294 +1,424 @@
-import { useMemo, useState } from 'react'
-import { ReceiptText, Plus, Pencil, Trash2, Calculator, CheckCircle2, TrendingUp, TrendingDown } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calculator, Loader2, Pencil, Plus, ReceiptText, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
-import { useStore, monthlyRevenue, monthlyExpenses, monthlyPayroll } from '@/store/AppStore'
-import { useI18n } from '@/lib/i18n'
-import type { Expense, Trainer, TrainerPayroll } from '@/types'
-import { fmtDate, fmtSYP, monthKey, monthLabel, todayISO } from '@/lib/format'
-import { PageHeader, EmptyState, Pill, Field, TableScroll, Th, Td, Money, Card, CardContent, CardHeader, CardTitle } from '@/components/shared'
+import { PageHeader, Pill } from '@/components/shared'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
+import { api, ApiError } from '@/services/api'
+import {
+  expensesApi, payrollApi,
+  type Currency, type ExpenseDto, type PayrollCalcDto, type PayrollDto, type PayrollStatus,
+} from '@/services/expenses'
 
-const CATS: Expense['category'][] = ['rent', 'utilities', 'supplies', 'maintenance', 'other']
-const catTone: Record<Expense['category'], 'blue' | 'amber' | 'purple' | 'red' | 'gray'> = {
-  rent: 'blue', utilities: 'amber', supplies: 'purple', maintenance: 'red', other: 'gray',
+const L = {
+  title: '\u0627\u0644\u0645\u0635\u0627\u0631\u064a\u0641 \u0648\u0627\u0644\u0631\u0648\u0627\u062a\u0628',
+  subtitle: '\u0645\u0635\u0627\u0631\u064a\u0641 \u0627\u0644\u0645\u0631\u0643\u0632 \u0648\u0631\u0648\u0627\u062a\u0628 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646',
+  tabExp: '\u0627\u0644\u0645\u0635\u0627\u0631\u064a\u0641',
+  tabPay: '\u0631\u0648\u0627\u062a\u0628 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646',
+  addExp: '\u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641',
+  editExp: '\u062a\u0639\u062f\u064a\u0644 \u0645\u0635\u0631\u0648\u0641',
+  allCats: '\u0643\u0644 \u0627\u0644\u062a\u0635\u0646\u064a\u0641\u0627\u062a',
+  category: '\u0627\u0644\u062a\u0635\u0646\u064a\u0641',
+  catHint: '\u0627\u0644\u062a\u0635\u0646\u064a\u0641 (\u0645\u062b\u0644\u0627\u064b: \u0625\u064a\u062c\u0627\u0631\u060c \u0643\u0647\u0631\u0628\u0627\u0621)',
+  description: '\u0627\u0644\u0648\u0635\u0641',
+  amount: '\u0627\u0644\u0645\u0628\u0644\u063a',
+  inSyp: '\u0628\u0627\u0644\u0644\u064a\u0631\u0629',
+  date: '\u0627\u0644\u062a\u0627\u0631\u064a\u062e',
+  from: '\u0645\u0646 \u062a\u0627\u0631\u064a\u062e',
+  to: '\u0625\u0644\u0649 \u062a\u0627\u0631\u064a\u062e',
+  currency: '\u0627\u0644\u0639\u0645\u0644\u0629',
+  syp: '\u0644\u064a\u0631\u0629 \u0633\u0648\u0631\u064a\u0629',
+  usd: '\u062f\u0648\u0644\u0627\u0631',
+  rate: '\u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641 (\u0644\u064a\u0631\u0629 \u0644\u0643\u0644 1 \u062f\u0648\u0644\u0627\u0631)',
+  empty: '\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a',
+  noDelete: '\u0627\u0644\u0645\u0635\u0627\u0631\u064a\u0641 \u062a\u064f\u0639\u062f\u0651\u0644 \u0648\u062a\u064f\u062f\u0642\u0651\u0642 \u0648\u0644\u0627 \u062a\u064f\u062d\u0630\u0641.',
+  save: '\u062d\u0641\u0638',
+  back: '\u0631\u062c\u0648\u0639',
+  confirm: '\u062a\u0623\u0643\u064a\u062f',
+  saved: '\u062a\u0645 \u0627\u0644\u062d\u0641\u0638',
+  prev: '\u0627\u0644\u0633\u0627\u0628\u0642',
+  next: '\u0627\u0644\u062a\u0627\u0644\u064a',
+  page: '\u0635\u0641\u062d\u0629',
+  trainer: '\u0627\u0644\u0645\u062f\u0631\u0628',
+  allTrainers: '\u0643\u0644 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646',
+  allStatus: '\u0643\u0644 \u0627\u0644\u062d\u0627\u0644\u0627\u062a',
+  status: '\u0627\u0644\u062d\u0627\u0644\u0629',
+  period: '\u0627\u0644\u0641\u062a\u0631\u0629',
+  method: '\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u062d\u0633\u0627\u0628',
+  calc: '\u0627\u062d\u062a\u0633\u0627\u0628 \u0631\u0627\u062a\u0628',
+  calcTitle: '\u0627\u062d\u062a\u0633\u0627\u0628 \u0631\u0627\u062a\u0628 \u0645\u062f\u0631\u0628',
+  pickTrainer: '\u0627\u062e\u062a\u0631 \u0645\u062f\u0631\u0628\u0627\u064b',
+  periodStart: '\u0628\u062f\u0627\u064a\u0629 \u0627\u0644\u0641\u062a\u0631\u0629',
+  periodEnd: '\u0646\u0647\u0627\u064a\u0629 \u0627\u0644\u0641\u062a\u0631\u0629',
+  preview: '\u0645\u0639\u0627\u064a\u0646\u0629 \u0627\u0644\u062d\u0633\u0627\u0628',
+  saveDue: '\u062d\u0641\u0638 \u0643\u0645\u0633\u062a\u062d\u0642',
+  previewNote: '\u0645\u0639\u0627\u064a\u0646\u0629 \u0641\u0642\u0637 \u0644\u0627 \u064a\u064f\u062d\u0641\u0638 \u0634\u064a\u0621 \u062d\u062a\u0649 \u062a\u0636\u063a\u0637 \u062d\u0641\u0638.',
+  hours: '\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644',
+  months: '\u0639\u062f\u062f \u0627\u0644\u0623\u0634\u0647\u0631',
+  revenue: '\u0627\u0644\u0625\u064a\u0631\u0627\u062f \u0627\u0644\u0645\u062d\u0635\u0651\u0644 (\u0644\u064a\u0631\u0629)',
+  pay: '\u062a\u0633\u062f\u064a\u062f',
+  payTitle: '\u062a\u0633\u062f\u064a\u062f \u0631\u0627\u062a\u0628 (\u0627\u0644\u0645\u062f\u064a\u0631)',
+  newRate: '\u0633\u0639\u0631 \u0635\u0631\u0641 \u062c\u062f\u064a\u062f \u0639\u0646\u062f \u0627\u0644\u062f\u0641\u0639 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)',
+  cancelPay: '\u0625\u0644\u063a\u0627\u0621',
+  cancelTitle: '\u0625\u0644\u063a\u0627\u0621 \u0631\u0627\u062a\u0628 \u0645\u0633\u062a\u062d\u0642',
+  reason: '\u0633\u0628\u0628 \u0627\u0644\u0625\u0644\u063a\u0627\u0621 (\u0645\u0637\u0644\u0648\u0628)',
+  okPay: '\u062a\u0645 \u062a\u0633\u062f\u064a\u062f \u0627\u0644\u0631\u0627\u062a\u0628',
+  okCancel: '\u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u0631\u0627\u062a\u0628',
+  okCreate: '\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0631\u0627\u062a\u0628 \u0643\u0645\u0633\u062a\u062d\u0642',
+  err: '\u062d\u062f\u062b \u062e\u0637\u0623 \u063a\u064a\u0631 \u0645\u062a\u0648\u0642\u0639',
 }
 
-/** payroll computation per trainer for a month */
-export function computeTrainerPayroll(state: ReturnType<typeof import('@/store/AppStore').useStore>['state'], trainer: Trainer, ym: string): Omit<TrainerPayroll, 'id'> | null {
-  const mySections = state.sections.filter((s) => s.trainerId === trainer.id && s.status !== 'cancelled')
-  if (trainer.payrollType === 'fixed') {
-    if (!trainer.fixedSalary) return null
-    return { trainerId: trainer.id, month: ym, amount: trainer.fixedSalary, details: 'راتب شهري ثابت', status: 'due' }
-  }
-  if (trainer.payrollType === 'hourly') {
-    const sessions = state.sessions.filter(
-      (s) => s.status === 'held' && s.date.startsWith(ym) && mySections.some((x) => x.id === s.sectionId),
-    )
-    const hours = sessions.reduce((a, s) => {
-      const [h1, m1] = s.start.split(':').map(Number)
-      const [h2, m2] = s.end.split(':').map(Number)
-      return a + (h2 * 60 + m2 - (h1 * 60 + m1)) / 60
-    }, 0)
-    if (hours === 0) return null
-    return {
-      trainerId: trainer.id, month: ym,
-      amount: Math.round(hours * (trainer.hourlyRate ?? 0)),
-      details: `${hours.toFixed(1)} ساعة × ${fmtSYP(trainer.hourlyRate ?? 0)}`,
-      status: 'due',
-    }
-  }
-  // percentage of revenue collected from their sections this month
-  const enrollIds = state.enrollments.filter((e) => mySections.some((s) => s.id === e.sectionId)).map((e) => e.id)
-  const revenue = state.payments.filter((p) => !p.voided && p.date.startsWith(ym) && enrollIds.includes(p.enrollmentId)).reduce((a, p) => a + p.amountSYP, 0)
-  if (revenue === 0) return null
-  return {
-    trainerId: trainer.id, month: ym,
-    amount: Math.round((revenue * (trainer.percentage ?? 0)) / 100),
-    details: `${trainer.percentage}% من إيراد محصّل ${fmtSYP(revenue)}`,
-    status: 'due',
-  }
-}
+const ST_AR: Record<PayrollStatus, string> = { Due: '\u0645\u0633\u062a\u062d\u0642', Paid: '\u0645\u062f\u0641\u0648\u0639', Cancelled: '\u0645\u0644\u063a\u0649' }
+const ST_TONE: Record<PayrollStatus, 'amber' | 'green' | 'red'> = { Due: 'amber', Paid: 'green', Cancelled: 'red' }
+
+interface TrainerLite { id: number; fullName: string; payCurrency: Currency; isActive: boolean }
+
+const PAGE_SIZE = 20
+const field = 'h-10 w-full rounded-md border bg-background px-3 text-sm'
+const th = 'border-b bg-muted/70 px-3 py-2.5 text-start text-xs font-bold text-muted-foreground'
+const td = 'border-b px-3 py-2.5 text-sm'
+const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : L.err)
+const n0 = (n: number) => Math.round(n).toLocaleString('en-US')
+const money = (cur: Currency, n: number) => (cur === 'Usd' ? `$${n}` : n0(n))
+const pagesOf = (t: number) => Math.max(1, Math.ceil(t / PAGE_SIZE))
+const pad = (n: number) => String(n).padStart(2, '0')
+const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 export default function Expenses() {
-  const { t, lang } = useI18n()
-  const { state, dispatch } = useStore()
-  const [editExp, setEditExp] = useState<Expense | 'new' | null>(null)
-  const [payMonth, setPayMonth] = useState(monthKey(todayISO()))
+  const [tab, setTab] = useState('exp')
+  const [reloadKey, setReloadKey] = useState(0)
+  const reload = () => setReloadKey((k) => k + 1)
+  const [busy, setBusy] = useState(false)
+  const [trainers, setTrainers] = useState<TrainerLite[]>([])
+  const [cats, setCats] = useState<string[]>([])
 
-  const expenses = [...state.expenses].sort((a, b) => b.date.localeCompare(a.date))
-  const payrollRows = state.payroll.filter((p) => p.month === payMonth)
+  // ---- expenses ----
+  const [eItems, setEItems] = useState<ExpenseDto[]>([])
+  const [eTotal, setETotal] = useState(0)
+  const [ePage, setEPage] = useState(1)
+  const [eCat, setECat] = useState('')
+  const [eFrom, setEFrom] = useState('')
+  const [eTo, setETo] = useState('')
+  const [eLoading, setELoading] = useState(true)
+  const [expDlg, setExpDlg] = useState<ExpenseDto | 'new' | null>(null)
+  const [xCat, setXCat] = useState('')
+  const [xDesc, setXDesc] = useState('')
+  const [xCur, setXCur] = useState<Currency>('Syp')
+  const [xAmt, setXAmt] = useState('')
+  const [xRate, setXRate] = useState('')
+  const [xDate, setXDate] = useState(isoDay(new Date()))
 
-  // last 6 months profit table
-  const profitRows = useMemo(() => {
-    const out = []
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(); d.setMonth(d.getMonth() - i)
-      const ym = monthKey(d.toISOString().slice(0, 10))
-      const revenue = monthlyRevenue(state, ym)
-      const exp = monthlyExpenses(state, ym)
-      const sal = monthlyPayroll(state, ym)
-      out.push({ ym, revenue, exp, sal, net: revenue - exp - sal })
+  // ---- payroll ----
+  const [pItems, setPItems] = useState<PayrollDto[]>([])
+  const [pTotal, setPTotal] = useState(0)
+  const [pPage, setPPage] = useState(1)
+  const [pTrainer, setPTrainer] = useState('')
+  const [pStatus, setPStatus] = useState<PayrollStatus | ''>('')
+  const [pLoading, setPLoading] = useState(true)
+  const [calcOpen, setCalcOpen] = useState(false)
+  const [cTrainer, setCTrainer] = useState('')
+  const [cStart, setCStart] = useState('')
+  const [cEnd, setCEnd] = useState('')
+  const [cRate, setCRate] = useState('')
+  const [calc, setCalc] = useState<PayrollCalcDto | null>(null)
+  const [payFor, setPayFor] = useState<PayrollDto | null>(null)
+  const [payRate, setPayRate] = useState('')
+  const [cancelFor, setCancelFor] = useState<PayrollDto | null>(null)
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    ;(api.get('/trainers?pageSize=100') as Promise<{ items: TrainerLite[] }>)
+      .then((r) => setTrainers(r.items))
+      .catch(() => { /* ignore */ })
+  }, [])
+
+  useEffect(() => {
+    expensesApi.categories().then(setCats).catch(() => { /* ignore */ })
+  }, [reloadKey])
+
+  useEffect(() => {
+    let alive = true
+    setELoading(true)
+    expensesApi
+      .list({ category: eCat || undefined, from: eFrom || undefined, to: eTo || undefined, page: ePage, pageSize: PAGE_SIZE })
+      .then((r) => { if (alive) { setEItems(r.items); setETotal(r.totalCount ?? r.total ?? r.items.length) } })
+      .catch((e) => { if (alive) toast.error(errMsg(e)) })
+      .finally(() => { if (alive) setELoading(false) })
+    return () => { alive = false }
+  }, [eCat, eFrom, eTo, ePage, reloadKey])
+
+  useEffect(() => {
+    let alive = true
+    setPLoading(true)
+    payrollApi
+      .list({ trainerId: pTrainer ? Number(pTrainer) : undefined, status: pStatus, page: pPage, pageSize: PAGE_SIZE })
+      .then((r) => { if (alive) { setPItems(r.items); setPTotal(r.totalCount ?? r.total ?? r.items.length) } })
+      .catch((e) => { if (alive) toast.error(errMsg(e)) })
+      .finally(() => { if (alive) setPLoading(false) })
+    return () => { alive = false }
+  }, [pTrainer, pStatus, pPage, reloadKey])
+
+  const act = async (fn: () => Promise<unknown>, ok: string, after?: () => void) => {
+    setBusy(true)
+    try {
+      await fn()
+      toast.success(ok)
+      after?.()
+      reload()
+    } catch (e) {
+      toast.error(errMsg(e))
+    } finally {
+      setBusy(false)
     }
-    return out
-  }, [state])
-
-  const generatePayroll = () => {
-    if (state.payroll.some((p) => p.month === payMonth)) { toast.error(t('payroll.already')); return }
-    const rows = state.trainers.filter((x) => x.active).map((x) => computeTrainerPayroll(state, x, payMonth)).filter((r): r is Omit<TrainerPayroll, 'id'> => r !== null)
-    if (rows.length === 0) { toast.error(t('common.noResults')); return }
-    dispatch({ type: 'SET_PAYROLL', month: payMonth, rows })
-    toast.success(t('payroll.generated'))
   }
+
+  // ---- expense dialog ----
+  const openExp = (x: ExpenseDto | 'new') => {
+    setExpDlg(x)
+    if (x === 'new') { setXCat(''); setXDesc(''); setXCur('Syp'); setXAmt(''); setXRate(''); setXDate(isoDay(new Date())) }
+    else { setXCat(x.category); setXDesc(x.description); setXCur(x.currency); setXAmt(String(x.amount)); setXRate(x.exchangeRate ? String(x.exchangeRate) : ''); setXDate(x.expenseDate.slice(0, 10)) }
+  }
+  const saveExp = () => {
+    const body = {
+      category: xCat.trim(), description: xDesc.trim(), currency: xCur, amount: Number(xAmt),
+      exchangeRate: xCur === 'Usd' ? Number(xRate) : null, expenseDate: xDate,
+    }
+    return act(
+      () => (expDlg === 'new' || expDlg === null ? expensesApi.create(body) : expensesApi.update(expDlg.id, body)),
+      L.saved, () => setExpDlg(null),
+    )
+  }
+  const expValid = xCat.trim() && xDesc.trim() && Number(xAmt) > 0 && xDate && (xCur === 'Syp' || Number(xRate) > 0)
+
+  // ---- payroll dialogs ----
+  const trainerOf = (id: string) => trainers.find((t) => t.id === Number(id))
+  const calcNeedsRate = trainerOf(cTrainer)?.payCurrency === 'Usd'
+  const calcBody = () => ({
+    trainerId: Number(cTrainer), periodStart: cStart, periodEnd: cEnd, exchangeRate: calcNeedsRate ? Number(cRate) : null,
+  })
+  const openCalc = () => {
+    const now = new Date()
+    setCTrainer(''); setCStart(isoDay(new Date(now.getFullYear(), now.getMonth(), 1))); setCEnd(isoDay(now)); setCRate(''); setCalc(null)
+    setCalcOpen(true)
+  }
+  const doPreview = async () => {
+    setBusy(true)
+    try { setCalc(await payrollApi.calculate(calcBody())) } catch (e) { toast.error(errMsg(e)); setCalc(null) } finally { setBusy(false) }
+  }
+  const calcValid = cTrainer && cStart && cEnd && (!calcNeedsRate || Number(cRate) > 0)
 
   return (
     <div>
-      <PageHeader title={t('exp.title')} subtitle={t('exp.subtitle')} />
+      <PageHeader title={L.title} subtitle={L.subtitle} />
 
-      <Tabs defaultValue="expenses">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="expenses" className="min-h-[44px]">{t('exp.tab.expenses')}</TabsTrigger>
-          <TabsTrigger value="payroll" className="min-h-[44px]">{t('exp.tab.payroll')}</TabsTrigger>
-          <TabsTrigger value="profit" className="min-h-[44px]">{t('exp.tab.profit')}</TabsTrigger>
+          <TabsTrigger value="exp" className="min-h-[44px] gap-2"><ReceiptText className="h-4 w-4" />{L.tabExp}</TabsTrigger>
+          <TabsTrigger value="pay" className="min-h-[44px] gap-2"><Wallet className="h-4 w-4" />{L.tabPay}</TabsTrigger>
         </TabsList>
 
-        {/* ---------- expenses ---------- */}
-        <TabsContent value="expenses">
-          <div className="mb-4 flex justify-end">
-            <Button className="min-h-[44px]" onClick={() => setEditExp('new')}>
-              <Plus className="me-2 h-4 w-4" />{t('exp.add')}
-            </Button>
+        {/* ---------------- expenses ---------------- */}
+        <TabsContent value="exp">
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
+            <select className={field} value={eCat} onChange={(e) => { setECat(e.target.value); setEPage(1) }}>
+              <option value="">{L.allCats}</option>
+              {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input type="date" className={field} title={L.from} value={eFrom} onChange={(e) => { setEFrom(e.target.value); setEPage(1) }} />
+            <input type="date" className={field} title={L.to} value={eTo} onChange={(e) => { setETo(e.target.value); setEPage(1) }} />
+            <Button className="min-h-[40px]" onClick={() => openExp('new')}><Plus className="me-2 h-4 w-4" />{L.addExp}</Button>
           </div>
-          {expenses.length === 0 ? (
-            <EmptyState message={t('exp.empty')} icon={<ReceiptText className="h-10 w-10" strokeWidth={1.2} />} />
+          {eLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : eItems.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">{L.empty}</div>
           ) : (
-            <TableScroll>
-              <table className="w-full min-w-[680px]">
+            <div className="scrollbar-thin overflow-x-auto rounded-xl border bg-card shadow-sm">
+              <table className="w-full min-w-[760px] border-collapse">
                 <thead>
-                  <tr><Th>{t('exp.title_')}</Th><Th>{t('exp.category')}</Th><Th>{t('common.amount')}</Th><Th>{t('common.date')}</Th><Th>{t('common.notes')}</Th><Th></Th></tr>
+                  <tr>
+                    <th className={th}>{L.category}</th><th className={th}>{L.description}</th><th className={th}>{L.amount}</th>
+                    <th className={th}>{L.inSyp}</th><th className={th}>{L.date}</th><th className={th}></th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((x) => (
-                    <tr key={x.id} className="border-b last:border-0 hover:bg-muted/40">
-                      <Td className="font-bold">{x.title}</Td>
-                      <Td><Pill tone={catTone[x.category]}>{t(`exp.cat.${x.category}`)}</Pill></Td>
-                      <Td><Money amount={x.amount} /></Td>
-                      <Td><span className="tnum text-muted-foreground">{fmtDate(x.date)}</span></Td>
-                      <Td className="max-w-[220px]"><span className="line-clamp-1 text-xs text-muted-foreground">{x.notes ?? '—'}</span></Td>
-                      <Td>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditExp(x)}><Pencil className="h-4 w-4" /></Button>
-                          <Button
-                            variant="ghost" size="icon" className="h-9 w-9 text-destructive"
-                            onClick={() => { dispatch({ type: 'DELETE_EXPENSE', id: x.id }); toast.success(t('common.deleted')) }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </Td>
+                  {eItems.map((x) => (
+                    <tr key={x.id}>
+                      <td className={td}><Pill tone="blue">{x.category}</Pill></td>
+                      <td className={td}>{x.description}</td>
+                      <td className={td}><span className="tnum" dir="ltr">{money(x.currency, x.amount)}</span>
+                        {x.currency === 'Usd' && x.exchangeRate && <div className="tnum text-[11px] text-muted-foreground">x {n0(x.exchangeRate)}</div>}
+                      </td>
+                      <td className={td}><span className="tnum">{n0(x.amountInSyp)}</span></td>
+                      <td className={td}><span className="tnum">{x.expenseDate.slice(0, 10)}</span></td>
+                      <td className={td}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openExp(x)}><Pencil className="h-4 w-4" /></Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </TableScroll>
+            </div>
           )}
+          <div className="mt-2 text-center text-xs text-muted-foreground">{L.noDelete}</div>
+          <div className="mt-3 flex items-center justify-center gap-3 text-sm">
+            <Button variant="outline" size="sm" disabled={ePage <= 1} onClick={() => setEPage(ePage - 1)}>{L.prev}</Button>
+            <span className="tnum">{L.page} {ePage} / {pagesOf(eTotal)}</span>
+            <Button variant="outline" size="sm" disabled={ePage >= pagesOf(eTotal)} onClick={() => setEPage(ePage + 1)}>{L.next}</Button>
+          </div>
         </TabsContent>
 
-        {/* ---------- payroll ---------- */}
-        <TabsContent value="payroll">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Input type="month" dir="ltr" className="min-h-[44px] w-[180px]" value={payMonth} onChange={(e) => setPayMonth(e.target.value)} />
-            <Button className="min-h-[44px]" onClick={generatePayroll}>
-              <Calculator className="me-2 h-4 w-4" />{t('payroll.generate')}
-            </Button>
+        {/* ---------------- payroll ---------------- */}
+        <TabsContent value="pay">
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <select className={field} value={pTrainer} onChange={(e) => { setPTrainer(e.target.value); setPPage(1) }}>
+              <option value="">{L.allTrainers}</option>
+              {trainers.map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+            </select>
+            <select className={field} value={pStatus} onChange={(e) => { setPStatus(e.target.value as PayrollStatus | ''); setPPage(1) }}>
+              <option value="">{L.allStatus}</option>
+              {(Object.keys(ST_AR) as PayrollStatus[]).map((k) => <option key={k} value={k}>{ST_AR[k]}</option>)}
+            </select>
+            <Button className="min-h-[40px]" onClick={openCalc}><Calculator className="me-2 h-4 w-4" />{L.calc}</Button>
           </div>
-          {payrollRows.length === 0 ? (
-            <EmptyState message={t('exp.empty')} />
+          {pLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : pItems.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">{L.empty}</div>
           ) : (
-            <TableScroll>
-              <table className="w-full min-w-[680px]">
+            <div className="scrollbar-thin overflow-x-auto rounded-xl border bg-card shadow-sm">
+              <table className="w-full min-w-[860px] border-collapse">
                 <thead>
-                  <tr><Th>{t('common.trainer')}</Th><Th>{t('common.details')}</Th><Th>{t('common.amount')}</Th><Th>{t('common.status')}</Th><Th></Th></tr>
+                  <tr>
+                    <th className={th}>{L.trainer}</th><th className={th}>{L.period}</th><th className={th}>{L.method}</th>
+                    <th className={th}>{L.amount}</th><th className={th}>{L.inSyp}</th><th className={th}>{L.status}</th><th className={th}></th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {payrollRows.map((p) => {
-                    const trainer = state.trainers.find((x) => x.id === p.trainerId)
-                    return (
-                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/40">
-                        <Td className="font-bold">{trainer?.name}</Td>
-                        <Td className="text-muted-foreground">{p.details}</Td>
-                        <Td><Money amount={p.amount} /></Td>
-                        <Td>
-                          {p.status === 'paid'
-                            ? <Pill tone="green">{t('payroll.status.paid')} {p.paidAt && <span className="tnum">· {fmtDate(p.paidAt)}</span>}</Pill>
-                            : <Pill tone="amber">{t('payroll.status.due')}</Pill>}
-                        </Td>
-                        <Td>
-                          {p.status === 'due' && (
-                            <Button size="sm" className="min-h-[36px]" onClick={() => { dispatch({ type: 'MARK_PAYROLL_PAID', id: p.id }); toast.success(t('payroll.paid')) }}>
-                              <CheckCircle2 className="me-1 h-3.5 w-3.5" />{t('payroll.markPaid')}
-                            </Button>
-                          )}
-                        </Td>
-                      </tr>
-                    )
-                  })}
+                  {pItems.map((p) => (
+                    <tr key={p.id}>
+                      <td className={td}><b>{p.trainerName}</b></td>
+                      <td className={td}><span className="tnum">{p.periodStart.slice(0, 10)}<br />{p.periodEnd.slice(0, 10)}</span></td>
+                      <td className={td}><span className="text-xs text-muted-foreground" dir="ltr">{p.calculationMethod}</span></td>
+                      <td className={td}><span className="tnum" dir="ltr">{money(p.currency, p.amount)}</span></td>
+                      <td className={td}><span className="tnum">{n0(p.amountInSyp)}</span></td>
+                      <td className={td}>
+                        <Pill tone={ST_TONE[p.status]}>{ST_AR[p.status]}</Pill>
+                        {p.paidAt && <div className="tnum mt-1 text-[11px] text-muted-foreground">{p.paidAt.slice(0, 10)}</div>}
+                      </td>
+                      <td className={td}>
+                        {p.status === 'Due' && (
+                          <div className="flex flex-wrap gap-1">
+                            <Button size="sm" onClick={() => { setPayFor(p); setPayRate('') }}>{L.pay}</Button>
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => { setCancelFor(p); setReason('') }}>{L.cancelPay}</Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-            </TableScroll>
+            </div>
           )}
-        </TabsContent>
-
-        {/* ---------- net profit ---------- */}
-        <TabsContent value="profit">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {(() => {
-              const ym = monthKey(todayISO())
-              const rev = monthlyRevenue(state, ym), exp = monthlyExpenses(state, ym), sal = monthlyPayroll(state, ym)
-              const net = rev - exp - sal
-              return (
-                <>
-                  <Card className="shadow-sm"><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('profit.revenue')}</div><div className="tnum mt-1 text-xl font-extrabold text-[hsl(var(--success))]">{fmtSYP(rev, lang)}</div></CardContent></Card>
-                  <Card className="shadow-sm"><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('profit.expenses')}</div><div className="tnum mt-1 text-xl font-extrabold text-destructive">{fmtSYP(exp, lang)}</div></CardContent></Card>
-                  <Card className="shadow-sm"><CardContent className="p-5"><div className="text-sm text-muted-foreground">{t('profit.salaries')}</div><div className="tnum mt-1 text-xl font-extrabold text-destructive">{fmtSYP(sal, lang)}</div></CardContent></Card>
-                  <Card className="shadow-sm"><CardContent className="p-5"><div className="flex items-center gap-1 text-sm text-muted-foreground">{net >= 0 ? <TrendingUp className="h-4 w-4 text-emerald-600" /> : <TrendingDown className="h-4 w-4 text-destructive" />}{t(net >= 0 ? 'profit.net' : 'profit.loss')}</div><div className={cn('tnum mt-1 text-xl font-extrabold', net >= 0 ? 'text-primary' : 'text-destructive')}>{fmtSYP(Math.abs(net), lang)}</div></CardContent></Card>
-                </>
-              )
-            })()}
+          <div className="mt-3 flex items-center justify-center gap-3 text-sm">
+            <Button variant="outline" size="sm" disabled={pPage <= 1} onClick={() => setPPage(pPage - 1)}>{L.prev}</Button>
+            <span className="tnum">{L.page} {pPage} / {pagesOf(pTotal)}</span>
+            <Button variant="outline" size="sm" disabled={pPage >= pagesOf(pTotal)} onClick={() => setPPage(pPage + 1)}>{L.next}</Button>
           </div>
-
-          <Card className="mt-5 shadow-sm">
-            <CardHeader><CardTitle className="text-base font-extrabold">{t('exp.tab.profit')} — {t('dash.last6')}</CardTitle></CardHeader>
-            <CardContent>
-              <TableScroll>
-                <table className="w-full min-w-[640px] border-0 shadow-none">
-                  <thead>
-                    <tr><Th>{t('common.month')}</Th><Th>{t('profit.revenue')}</Th><Th>{t('profit.expenses')}</Th><Th>{t('profit.salaries')}</Th><Th>{t('profit.net')}</Th></tr>
-                  </thead>
-                  <tbody>
-                    {profitRows.map((r) => (
-                      <tr key={r.ym} className="border-b last:border-0">
-                        <Td className="font-bold">{monthLabel(r.ym, lang)}</Td>
-                        <Td><Money amount={r.revenue} className="text-[hsl(var(--success))]" /></Td>
-                        <Td><Money amount={r.exp} className="text-muted-foreground" /></Td>
-                        <Td><Money amount={r.sal} className="text-muted-foreground" /></Td>
-                        <Td><Money amount={r.net} className={r.net >= 0 ? 'text-primary' : 'text-destructive'} /></Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScroll>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 
       {/* expense dialog */}
-      <ExpenseDialog target={editExp} onClose={() => setEditExp(null)} />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-
-function ExpenseDialog({ target, onClose }: { target: Expense | 'new' | null; onClose: () => void }) {
-  const { t } = useI18n()
-  const { dispatch } = useStore()
-  const editing = target !== 'new' ? target : null
-  const [title, setTitle] = useState(editing?.title ?? '')
-  const [category, setCategory] = useState<Expense['category']>(editing?.category ?? 'other')
-  const [amount, setAmount] = useState(editing?.amount.toString() ?? '')
-  const [date, setDate] = useState(editing?.date ?? todayISO())
-  const [notes, setNotes] = useState(editing?.notes ?? '')
-
-  const save = () => {
-    if (!title.trim() || !(Number(amount) > 0)) { toast.error(t('common.required')); return }
-    dispatch({
-      type: 'SAVE_EXPENSE',
-      expense: { id: editing?.id ?? 0, title: title.trim(), category, amount: Number(amount), date, notes: notes.trim() || undefined },
-    })
-    toast.success(t('common.saved'))
-    onClose()
-  }
-
-  return (
-    <Dialog open={target !== null} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{editing ? t('exp.edit') : t('exp.add')}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <Field label={t('exp.title_')} required>
-            <Input className="min-h-[44px]" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t('exp.category')}>
-              <Select value={category} onValueChange={(v) => setCategory(v as Expense['category'])}>
-                <SelectTrigger className="min-h-[44px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATS.map((c) => <SelectItem key={c} value={c}>{t(`exp.cat.${c}`)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label={t('common.amount')} required>
-              <Input type="number" dir="ltr" className="min-h-[44px]" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            </Field>
+      <Dialog open={expDlg !== null} onOpenChange={(o) => { if (!o) setExpDlg(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{expDlg === 'new' ? L.addExp : L.editExp}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <input className={field} list="exp-cats" placeholder={L.catHint} value={xCat} onChange={(e) => setXCat(e.target.value)} />
+            <datalist id="exp-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist>
+            <input className={field} placeholder={L.description} value={xDesc} onChange={(e) => setXDesc(e.target.value)} />
+            <div className="grid grid-cols-2 gap-2">
+              <select className={field} value={xCur} onChange={(e) => setXCur(e.target.value as Currency)}>
+                <option value="Syp">{L.syp}</option>
+                <option value="Usd">{L.usd}</option>
+              </select>
+              <input type="number" min={0} dir="ltr" className={field} placeholder={L.amount} value={xAmt} onChange={(e) => setXAmt(e.target.value)} />
+            </div>
+            {xCur === 'Usd' && <input type="number" min={0} dir="ltr" className={field} placeholder={L.rate} value={xRate} onChange={(e) => setXRate(e.target.value)} />}
+            <input type="date" className={field} value={xDate} onChange={(e) => setXDate(e.target.value)} />
           </div>
-          <Field label={t('common.date')}>
-            <Input type="date" dir="ltr" className="min-h-[44px]" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-          <Field label={t('common.notes')}>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </Field>
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" className="min-h-[44px]" onClick={onClose}>{t('common.cancel')}</Button>
-          <Button className="min-h-[44px]" onClick={save}>{t('common.save')}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setExpDlg(null)}>{L.back}</Button>
+            <Button disabled={busy || !expValid} onClick={saveExp}>{busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{L.save}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* calculate payroll dialog */}
+      <Dialog open={calcOpen} onOpenChange={(o) => { if (!o) setCalcOpen(false) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{L.calcTitle}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <select className={field} value={cTrainer} onChange={(e) => { setCTrainer(e.target.value); setCalc(null) }}>
+              <option value="">{L.pickTrainer}</option>
+              {trainers.filter((t) => t.isActive).map((t) => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div><div className="mb-1 text-xs text-muted-foreground">{L.periodStart}</div><input type="date" className={field} value={cStart} onChange={(e) => { setCStart(e.target.value); setCalc(null) }} /></div>
+              <div><div className="mb-1 text-xs text-muted-foreground">{L.periodEnd}</div><input type="date" className={field} value={cEnd} onChange={(e) => { setCEnd(e.target.value); setCalc(null) }} /></div>
+            </div>
+            {calcNeedsRate && <input type="number" min={0} dir="ltr" className={field} placeholder={L.rate} value={cRate} onChange={(e) => { setCRate(e.target.value); setCalc(null) }} />}
+          </div>
+          {calc && (
+            <div className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
+              <div className="text-xs text-muted-foreground">{L.previewNote}</div>
+              <div dir="ltr" className="text-xs">{calc.calculationMethod}</div>
+              {calc.monthsCovered !== null && <div>{L.months}: <b className="tnum">{calc.monthsCovered}</b></div>}
+              {calc.hoursWorked !== null && <div>{L.hours}: <b className="tnum">{calc.hoursWorked}</b></div>}
+              {calc.revenueCollectedInSyp !== null && <div>{L.revenue}: <b className="tnum">{n0(calc.revenueCollectedInSyp)}</b></div>}
+              <div>{L.amount}: <b className="tnum" dir="ltr">{money(calc.currency, calc.amount)}</b> ({L.inSyp}: <b className="tnum">{n0(calc.amountInSyp)}</b>)</div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={busy || !calcValid} onClick={doPreview}>{L.preview}</Button>
+            <Button disabled={busy || !calc} onClick={() => act(() => payrollApi.create(calcBody()), L.okCreate, () => setCalcOpen(false))}>{L.saveDue}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* pay dialog */}
+      <Dialog open={!!payFor} onOpenChange={(o) => { if (!o) setPayFor(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{L.payTitle}</DialogTitle></DialogHeader>
+          {payFor && <div className="text-sm"><b>{payFor.trainerName}</b> - <span className="tnum" dir="ltr">{money(payFor.currency, payFor.amount)}</span></div>}
+          {payFor?.currency === 'Usd' && (
+            <input type="number" min={0} dir="ltr" className={field} placeholder={L.newRate} value={payRate} onChange={(e) => setPayRate(e.target.value)} />
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPayFor(null)}>{L.back}</Button>
+            <Button disabled={busy}
+              onClick={() => payFor && act(() => payrollApi.pay(payFor.id, payFor.currency === 'Usd' && Number(payRate) > 0 ? Number(payRate) : null), L.okPay, () => setPayFor(null))}>
+              {L.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* cancel payroll dialog */}
+      <Dialog open={!!cancelFor} onOpenChange={(o) => { if (!o) setCancelFor(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{L.cancelTitle}</DialogTitle></DialogHeader>
+          {cancelFor && <div className="text-sm"><b>{cancelFor.trainerName}</b></div>}
+          <input className={field} placeholder={L.reason} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCancelFor(null)}>{L.back}</Button>
+            <Button variant="destructive" disabled={busy || !reason.trim()}
+              onClick={() => cancelFor && act(() => payrollApi.cancel(cancelFor.id, reason.trim()), L.okCancel, () => setCancelFor(null))}>
+              {L.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
