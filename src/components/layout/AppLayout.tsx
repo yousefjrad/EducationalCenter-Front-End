@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import {
   LayoutDashboard, ClipboardList, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
-import { useStore, useCurrentUser, computedAlerts, can } from '@/store/AppStore'
+import { useStore, useCurrentUser, can } from '@/store/AppStore'
+import { api } from '@/services/api'
 import { useAuth } from '@/lib/auth'
 import type { PermissionKey } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -128,23 +129,72 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   )
 }
 
+interface BellAlerts {
+  overdueInstallments: {
+    count: number
+    items: { installmentId: number; studentName: string; sectionName: string; installmentNumber: number; daysOverdue: number }[]
+  } | null
+  pendingEnrollments: {
+    count: number
+    items: { enrollmentId: number; studentName: string; sectionName: string; isExpired: boolean }[]
+  } | null
+  waitingList: {
+    count: number
+    items: { sectionId: number; sectionName: string; waitingCount: number; firstStudentName: string }[]
+  } | null
+  totalCount: number
+}
+
+interface BellItem { key: string; text: string; link: string; overdue: boolean }
+
+const BELL_TXT = {
+  ar: { inst: '\u0642\u0633\u0637', late: '\u0645\u062a\u0623\u062e\u0631', days: '\u064a\u0648\u0645', hold: '\u062d\u062c\u0632 \u0645\u0642\u0639\u062f \u0628\u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u062a\u0623\u0643\u064a\u062f', expired: '\u0627\u0646\u062a\u0647\u062a \u0645\u062f\u0629 \u0627\u0644\u062d\u062c\u0632', waiting: '\u0645\u0642\u0639\u062f \u0634\u0627\u063a\u0631 \u0648\u0628\u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u062a\u0631\u0642\u064a\u0629' },
+  en: { inst: 'Installment', late: 'overdue', days: 'days', hold: 'Seat hold awaiting confirmation', expired: 'Seat hold expired', waiting: 'Free seat, waiting to promote' },
+}
+
 function NotificationsBell() {
   const { t, lang } = useI18n()
-  const { state, dispatch } = useStore()
   const navigate = useNavigate()
-  const alerts = useMemo(
-    () => computedAlerts(state).filter((a) => !state.dismissedAlerts.includes(a.key)),
-    [state],
-  )
+  const [data, setData] = useState<BellAlerts | null>(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    const load = () => {
+      ;(api.get('/alerts') as Promise<BellAlerts>)
+        .then((r) => { if (alive) setData(r) })
+        .catch(() => { /* keep the last value */ })
+    }
+    load()
+    const id = setInterval(load, 60000)
+    return () => { alive = false; clearInterval(id) }
+  }, [open])
+
+  const items = useMemo<BellItem[]>(() => {
+    const x = BELL_TXT[lang === 'ar' ? 'ar' : 'en']
+    const out: BellItem[] = []
+    data?.overdueInstallments?.items.forEach((a) =>
+      out.push({ key: `o${a.installmentId}`, link: '/payments', overdue: true,
+        text: `${a.studentName} - ${a.sectionName} - ${x.inst} #${a.installmentNumber} ${x.late} (${a.daysOverdue} ${x.days})` }))
+    data?.pendingEnrollments?.items.forEach((a) =>
+      out.push({ key: `p${a.enrollmentId}`, link: '/enrollments', overdue: false,
+        text: `${a.studentName} - ${a.sectionName} - ${a.isExpired ? x.expired : x.hold}` }))
+    data?.waitingList?.items.forEach((a) =>
+      out.push({ key: `w${a.sectionId}`, link: '/enrollments', overdue: false,
+        text: `${a.sectionName}: ${x.waiting} (${a.firstStudentName}, ${a.waitingCount})` }))
+    return out
+  }, [data, lang])
+
+  const total = data?.totalCount ?? 0
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-full" aria-label={t('notif.title')}>
           <Bell className="h-5 w-5" />
-          {alerts.length > 0 && (
+          {total > 0 && (
             <span className="tnum absolute -top-0.5 -end-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
-              {alerts.length}
+              {total}
             </span>
           )}
         </Button>
@@ -152,28 +202,17 @@ function NotificationsBell() {
       <PopoverContent align="end" className="w-[min(92vw,380px)] p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <span className="text-sm font-extrabold">{t('notif.title')}</span>
-          {alerts.length > 0 && (
-            <button
-              className="text-xs font-bold text-primary hover:underline"
-              onClick={() => alerts.forEach((a) => dispatch({ type: 'DISMISS_ALERT', key: a.key }))}
-            >
-              {t('notif.markAll')}
-            </button>
-          )}
         </div>
         <div className="scrollbar-thin max-h-[60vh] overflow-y-auto">
-          {alerts.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t('notif.empty')}</div>}
-          {alerts.map((a) => (
+          {items.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t('notif.empty')}</div>}
+          {items.map((a) => (
             <button
               key={a.key}
-              onClick={() => { dispatch({ type: 'DISMISS_ALERT', key: a.key }); navigate(a.link) }}
+              onClick={() => { setOpen(false); navigate(a.link) }}
               className="flex w-full items-start gap-3 border-b px-4 py-3 text-start transition-colors last:border-0 hover:bg-muted/60"
             >
-              <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', a.type === 'overdue' ? 'bg-destructive' : 'bg-[hsl(var(--warning))]')} />
-              <span className="min-w-0">
-                <span className="block text-sm font-bold leading-snug">{a.text[lang]}</span>
-                <span className="tnum mt-0.5 block text-xs text-muted-foreground">{fmtDate(a.date)}</span>
-              </span>
+              <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', a.overdue ? 'bg-destructive' : 'bg-[hsl(var(--warning))]')} />
+              <span className="block min-w-0 text-sm font-bold leading-snug">{a.text}</span>
             </button>
           ))}
         </div>
@@ -181,7 +220,6 @@ function NotificationsBell() {
     </Popover>
   )
 }
-
 export default function AppLayout() {
   const { t, lang, setLang } = useI18n()
   const user = useCurrentUser()
