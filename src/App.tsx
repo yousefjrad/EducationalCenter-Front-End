@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router'
 import { Toaster } from '@/components/ui/sonner'
 import { I18nProvider } from '@/lib/i18n'
-import { AppStoreProvider } from '@/store/AppStore'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import AppLayout from '@/components/layout/AppLayout'
 import Login from '@/pages/Login'
@@ -39,7 +38,6 @@ export default function App() {
   return (
     <I18nProvider>
       <AuthProvider>
-        <AppStoreProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -68,7 +66,6 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster position="top-center" richColors closeButton />
-        </AppStoreProvider>
       </AuthProvider>
     </I18nProvider>
   )

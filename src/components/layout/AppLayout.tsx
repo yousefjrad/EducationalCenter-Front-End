@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
-import { useStore, useCurrentUser, can } from '@/store/AppStore'
+import { hasPermission } from '@/lib/permissions'
 import { api } from '@/services/api'
 import { useAuth } from '@/lib/auth'
 import type { PermissionKey } from '@/types'
@@ -71,14 +71,12 @@ const NAV: NavGroup[] = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t, lang } = useI18n()
-  const { state } = useStore()
-  const uid = state.currentUserId
 
   return (
     <div className="flex h-full flex-col bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))]">
       <div className="flex items-center gap-3 border-b border-[hsl(var(--sidebar-border))] px-5 py-5">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--sidebar-primary))] text-xl font-black text-white shadow-lg">
-          {state.certTemplate.logoText}
+          <GraduationCap className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-base font-extrabold text-white">{t('app.name')}</div>
@@ -88,7 +86,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="scrollbar-thin flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {NAV.map((group) => {
-          const items = group.items.filter((i) => can(state, uid, i.perm))
+          const items = group.items.filter((i) => hasPermission(i.perm))
           if (items.length === 0) return null
           return (
             <div key={group.key}>
@@ -123,7 +121,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="border-t border-[hsl(var(--sidebar-border))] px-5 py-3 text-[11px] text-[hsl(var(--sidebar-foreground))]/60">
-        {state.settings.centerName} · {lang === 'ar' ? 'الإصدار 1.0' : 'v1.0'}
+        {t('app.name')} · {lang === 'ar' ? 'الإصدار 1.0' : 'v1.0'}
       </div>
     </div>
   )
@@ -222,9 +220,8 @@ function NotificationsBell() {
 }
 export default function AppLayout() {
   const { t, lang, setLang } = useI18n()
-  const user = useCurrentUser()
-  const { state } = useStore()
   const { user: authUser, logout } = useAuth()
+  const user = authUser
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const roleName = authUser?.roleName ?? ''
@@ -251,7 +248,7 @@ export default function AppLayout() {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-extrabold">{state.settings.centerName}</div>
+            <div className="truncate text-sm font-extrabold">{t('app.name')}</div>
             <div className="tnum hidden text-xs text-muted-foreground sm:block">
               {fmtDate(new Date().toISOString().slice(0, 10))}
             </div>
