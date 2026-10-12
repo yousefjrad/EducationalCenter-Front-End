@@ -5,7 +5,7 @@ import { PageHeader, Pill } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useCan } from '@/store/AppStore'
+import { useCan } from '@/lib/can'
 import { api, ApiError } from '@/services/api'
 import type { EnrollmentDto } from '@/services/enrollments'
 import {
