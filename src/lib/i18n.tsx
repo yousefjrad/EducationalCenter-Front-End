@@ -82,6 +82,7 @@ export const dict: Dict = {
   'nav.settings': { ar: 'الإعدادات', en: 'Settings' },
   'branch.switcher': { ar: '\u0627\u0644\u0641\u0631\u0639', en: 'Branch' },
   'branch.all': { ar: '\u0643\u0644 \u0627\u0644\u0641\u0631\u0648\u0639 (\u0644\u0644\u0642\u0631\u0627\u0621\u0629)', en: 'All branches (read only)' },
+  'nav.branches': { ar: '\u0627\u0644\u0641\u0631\u0648\u0639', en: 'Branches' },
   'nav.group.main': { ar: 'الرئيسية', en: 'Main' },
   'nav.group.academic': { ar: 'الأكاديمي', en: 'Academic' },
   'nav.group.finance': { ar: 'المالية', en: 'Finance' },

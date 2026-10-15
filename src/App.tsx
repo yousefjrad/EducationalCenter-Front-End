@@ -19,6 +19,7 @@ import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Audit from '@/pages/Audit'
 import SettingsPage from '@/pages/Settings'
+import Branches from '@/pages/Branches'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/users" element={<Users />} />
               <Route path="/audit" element={<Audit />} />
+              <Route path="/branches" element={<Branches />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

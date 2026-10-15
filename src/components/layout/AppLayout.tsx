@@ -64,6 +64,7 @@ const NAV: NavGroup[] = [
   {
     key: 'nav.group.system',
     items: [
+      { to: '/branches', labelKey: 'nav.branches', icon: Building2, perm: 'Branches.View' },
       { to: '/users', labelKey: 'nav.users', icon: ShieldCheck, perm: 'Users.Manage' },
       { to: '/audit', labelKey: 'nav.audit', icon: ScrollText, perm: 'Audit.View' },
       { to: '/settings', labelKey: 'nav.settings', icon: SettingsIcon, perm: 'Settings.Manage' },
@@ -231,6 +232,12 @@ function BranchSwitcher() {
       .then((r) => { if (alive) setBranches(r) })
       .catch(() => { /* not allowed to list branches: nothing to show */ })
     return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    const h = () => { branchesApi.list().then(setBranches).catch(() => { /* ignore */ }) }
+    window.addEventListener('branches:changed', h)
+    return () => window.removeEventListener('branches:changed', h)
   }, [])
 
   if (isSuperAdmin) {
