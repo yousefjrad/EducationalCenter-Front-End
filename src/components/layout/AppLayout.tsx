@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import {
   LayoutDashboard, ClipboardList, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
   Wallet, ClipboardCheck, Award, ReceiptText, BarChart3, ShieldCheck,
-  ScrollText, Settings as SettingsIcon, Bell, LogOut, Menu, Languages, X, Building2,
+  ScrollText, Settings as SettingsIcon, Bell, LogOut, Menu, Languages, X, Building2, PiggyBank,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
@@ -58,6 +58,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/payments', labelKey: 'nav.payments', icon: Wallet, perm: 'Payments.View' },
       { to: '/expenses', labelKey: 'nav.expenses', icon: ReceiptText, perm: 'Expenses.Manage' },
+      { to: '/budgets', labelKey: 'nav.budgets', icon: PiggyBank, perm: 'Budgets.View' },
       { to: '/reports', labelKey: 'nav.reports', icon: BarChart3, perm: 'Reports.View' },
     ],
   },
@@ -131,6 +132,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 interface BellAlerts {
+  budgetOverruns?: { items: { branchId: number; branchName: string; overBySyp: number }[] } | null
   overdueInstallments: {
     count: number
     items: { installmentId: number; studentName: string; sectionName: string; installmentNumber: number; daysOverdue: number }[]
@@ -174,6 +176,9 @@ function NotificationsBell() {
   const items = useMemo<BellItem[]>(() => {
     const x = BELL_TXT[lang === 'ar' ? 'ar' : 'en']
     const out: BellItem[] = []
+    data?.budgetOverruns?.items.forEach((b) =>
+      out.push({ key: `b${b.branchId}`, link: '/budgets', overdue: true,
+        text: `\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u0645\u064a\u0632\u0627\u0646\u064a\u0629 - ${b.branchName}` }))
     data?.overdueInstallments?.items.forEach((a) =>
       out.push({ key: `o${a.installmentId}`, link: '/payments', overdue: true,
         text: `${a.studentName} - ${a.sectionName} - ${x.inst} #${a.installmentNumber} ${x.late} (${a.daysOverdue} ${x.days})` }))
