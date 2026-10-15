@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   LayoutDashboard, ClipboardList, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
   Wallet, ClipboardCheck, Award, ReceiptText, BarChart3, ShieldCheck,
@@ -227,6 +227,23 @@ function NotificationsBell() {
     </Popover>
   )
 }
+const NO_BRANCH_NEEDED = ['/branches', '/branch-comparison', '/budgets', '/users', '/audit', '/settings']
+
+function AllBranchesNotice() {
+  const { lang } = useI18n()
+  const { isSuperAdmin, activeBranchId } = useAuth()
+  const { pathname } = useLocation()
+  if (!isSuperAdmin || activeBranchId || NO_BRANCH_NEEDED.includes(pathname)) return null
+  return (
+    <div className="mb-4 flex items-center gap-2 rounded-lg border bg-muted px-4 py-3 text-sm font-bold">
+      <Building2 className="h-4 w-4 shrink-0" />
+      {lang === 'ar'
+        ? '\u0623\u0646\u062a \u062a\u0639\u0631\u0636 \u0643\u0644 \u0627\u0644\u0641\u0631\u0648\u0639 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637. \u0627\u062e\u062a\u0631 \u0641\u0631\u0639\u0627\u064b \u0645\u0646 \u0627\u0644\u0623\u0639\u0644\u0649 \u0644\u0625\u0636\u0627\u0641\u0629 \u0623\u0648 \u062a\u0639\u062f\u064a\u0644 \u0623\u064a \u0628\u064a\u0627\u0646\u0627\u062a.'
+        : 'Viewing all branches (read only). Choose a branch above to add or change data.'}
+    </div>
+  )
+}
+
 function BranchSwitcher() {
   const { t } = useI18n()
   const { user, isSuperAdmin, activeBranchId, setActiveBranch } = useAuth()
@@ -357,6 +374,7 @@ export default function AppLayout() {
         </header>
 
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
+          <AllBranchesNotice />
           <Outlet />
         </main>
       </div>
