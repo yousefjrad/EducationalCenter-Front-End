@@ -59,6 +59,7 @@ const NAV: NavGroup[] = [
       { to: '/payments', labelKey: 'nav.payments', icon: Wallet, perm: 'Payments.View' },
       { to: '/expenses', labelKey: 'nav.expenses', icon: ReceiptText, perm: 'Expenses.Manage' },
       { to: '/budgets', labelKey: 'nav.budgets', icon: PiggyBank, perm: 'Budgets.View' },
+      { to: '/branch-comparison', labelKey: 'nav.branchComparison', icon: Building2, perm: 'Reports.CrossBranch' },
       { to: '/reports', labelKey: 'nav.reports', icon: BarChart3, perm: 'Reports.View' },
     ],
   },

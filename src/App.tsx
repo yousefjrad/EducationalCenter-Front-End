@@ -21,6 +21,7 @@ import Audit from '@/pages/Audit'
 import SettingsPage from '@/pages/Settings'
 import Branches from '@/pages/Branches'
 import Budgets from '@/pages/Budgets'
+import BranchComparison from '@/pages/BranchComparison'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/audit" element={<Audit />} />
               <Route path="/branches" element={<Branches />} />
               <Route path="/budgets" element={<Budgets />} />
+              <Route path="/branch-comparison" element={<BranchComparison />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
