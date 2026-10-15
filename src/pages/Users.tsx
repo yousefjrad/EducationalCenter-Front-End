@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/services/api'
+import { branchesApi, type BranchDto } from '@/services/branches'
 import {
   rolesApi, usersApi,
   type PermissionGroupDto, type RoleDto, type UserDto,
@@ -62,6 +63,13 @@ const L = {
   unlocked: '\u062a\u0645 \u0641\u0643 \u0627\u0644\u0642\u0641\u0644',
   pwdDone: '\u062a\u0645 \u062a\u0639\u064a\u064a\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
   err: '\u062d\u062f\u062b \u062e\u0637\u0623 \u063a\u064a\u0631 \u0645\u062a\u0648\u0642\u0639',
+}
+
+const LB = {
+  branch: '\u0627\u0644\u0641\u0631\u0639',
+  pickBranch: '\u0627\u062e\u062a\u0631 \u0627\u0644\u0641\u0631\u0639 (\u0645\u0637\u0644\u0648\u0628)',
+  all: '\u0643\u0644 \u0627\u0644\u0641\u0631\u0648\u0639',
+  adminNoBranch: '\u0627\u0644\u0645\u062f\u064a\u0631 \u0627\u0644\u0639\u0627\u0645 \u064a\u0639\u0645\u0644 \u0639\u0644\u0649 \u0643\u0644 \u0627\u0644\u0641\u0631\u0648\u0639 \u0648\u0644\u0627 \u064a\u0631\u062a\u0628\u0637 \u0628\u0641\u0631\u0639.',
 }
 
 const PAGE_SIZE = 20
@@ -128,6 +136,12 @@ function UsersTab({ roles }: { roles: RoleDto[] }) {
   const [fPwd, setFPwd] = useState('')
   const [fRole, setFRole] = useState('')
   const [fActive, setFActive] = useState(true)
+  const [fBranch, setFBranch] = useState('')
+  const [branches, setBranches] = useState<BranchDto[]>([])
+
+  useEffect(() => {
+    branchesApi.list().then(setBranches).catch(() => { /* not allowed: the list stays empty */ })
+  }, [])
   const [resetFor, setResetFor] = useState<UserDto | null>(null)
   const [newPwd, setNewPwd] = useState('')
 
@@ -166,16 +180,18 @@ function UsersTab({ roles }: { roles: RoleDto[] }) {
 
   const open = (x: UserDto | 'new') => {
     setDlg(x)
-    if (x === 'new') { setFName(''); setFEmail(''); setFPwd(''); setFRole(''); setFActive(true) }
-    else { setFName(x.fullName); setFEmail(x.email); setFPwd(''); setFRole(String(x.roleId)); setFActive(x.isActive) }
+    if (x === 'new') { setFName(''); setFEmail(''); setFPwd(''); setFRole(''); setFActive(true); setFBranch('') }
+    else { setFName(x.fullName); setFEmail(x.email); setFPwd(''); setFRole(String(x.roleId)); setFActive(x.isActive); setFBranch(x.branchId ? String(x.branchId) : '') }
   }
-  const valid = fName.trim() && fEmail.trim() && fRole && (dlg !== 'new' || fPwd)
+  const isAdminRole = roles.find((r) => String(r.id) === fRole)?.name === 'Admin'
+  const branchName = (id: number | null) => (id ? (branches.find((b) => b.id === id)?.name ?? String(id)) : LB.all)
+  const valid = fName.trim() && fEmail.trim() && fRole && (dlg !== 'new' || fPwd) && (isAdminRole || fBranch)
   const save = () =>
     act(
       () =>
         dlg === 'new' || dlg === null
-          ? usersApi.create({ fullName: fName.trim(), email: fEmail.trim(), password: fPwd, roleId: Number(fRole) })
-          : usersApi.update(dlg.id, { fullName: fName.trim(), email: fEmail.trim(), roleId: Number(fRole), isActive: fActive }),
+          ? usersApi.create({ fullName: fName.trim(), email: fEmail.trim(), password: fPwd, roleId: Number(fRole), branchId: isAdminRole ? null : Number(fBranch) })
+          : usersApi.update(dlg.id, { fullName: fName.trim(), email: fEmail.trim(), roleId: Number(fRole), isActive: fActive, branchId: isAdminRole ? null : Number(fBranch) }),
       L.saved, () => setDlg(null),
     )
   const toggleActive = (u: UserDto) =>
@@ -206,7 +222,7 @@ function UsersTab({ roles }: { roles: RoleDto[] }) {
           <table className="w-full min-w-[820px] border-collapse">
             <thead>
               <tr>
-                <th className={th}>{L.name}</th><th className={th}>{L.email}</th><th className={th}>{L.role}</th>
+                <th className={th}>{L.name}</th><th className={th}>{L.email}</th><th className={th}>{L.role}</th><th className={th}>{LB.branch}</th>
                 <th className={th}>{L.status}</th><th className={th}>{L.lastLogin}</th><th className={th}></th>
               </tr>
             </thead>
@@ -216,6 +232,7 @@ function UsersTab({ roles }: { roles: RoleDto[] }) {
                   <td className={td}><b>{u.fullName}</b></td>
                   <td className={td}><span className="tnum text-muted-foreground" dir="ltr">{u.email}</span></td>
                   <td className={td}><Pill tone="teal">{u.roleName}</Pill></td>
+                  <td className={td}>{branchName(u.branchId)}</td>
                   <td className={td}>
                     <label className="flex cursor-pointer items-center gap-2">
                       <input type="checkbox" className="h-4 w-4" checked={u.isActive} disabled={busy} onChange={() => toggleActive(u)} />
@@ -258,6 +275,13 @@ function UsersTab({ roles }: { roles: RoleDto[] }) {
               <option value="">{L.pickRole}</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
+            {!isAdminRole && (
+              <select className={field} value={fBranch} onChange={(e) => setFBranch(e.target.value)}>
+                <option value="">{LB.pickBranch}</option>
+                {branches.filter((b) => b.isActive || String(b.id) === fBranch).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+            {isAdminRole && <div className="text-xs text-muted-foreground">{LB.adminNoBranch}</div>}
             {dlg !== 'new' && (
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" className="h-4 w-4" checked={fActive} onChange={(e) => setFActive(e.target.checked)} />{L.active}

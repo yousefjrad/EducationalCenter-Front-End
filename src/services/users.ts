@@ -9,6 +9,7 @@ export interface UserDto {
   isActive: boolean
   lastLoginAt: string | null
   lockedUntil: string | null
+  branchId: number | null
 }
 
 export interface UserBody {
@@ -54,9 +55,9 @@ const qs = (q: Record<string, string | number | boolean | undefined>) => {
 export const usersApi = {
   list: (q: { search?: string; roleId?: number; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get(`/users?${qs(q)}`) as Promise<PageOf<UserDto>>,
-  create: (b: { fullName: string; email: string; password: string; roleId: number }) =>
+  create: (b: { fullName: string; email: string; password: string; roleId: number; branchId?: number | null }) =>
     api.post('/users', b) as Promise<UserDto>,
-  update: (id: number, b: UserBody) => api.put(`/users/${id}`, b) as Promise<UserDto>,
+  update: (id: number, b: UserBody & { branchId?: number | null }) => api.put(`/users/${id}`, b) as Promise<UserDto>,
   unlock: (id: number) => api.post(`/users/${id}/unlock`, {}) as Promise<UserDto>,
   resetPassword: (id: number, newPassword: string) =>
     api.post(`/users/${id}/reset-password`, { newPassword }) as Promise<unknown>,
