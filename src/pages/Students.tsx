@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { GraduationCap, Plus, Pencil, Power, KeyRound } from 'lucide-react'
+import { GraduationCap, Plus, Pencil, Power, KeyRound, ArrowLeftRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { studentsApi, type StudentDto } from '@/services/students'
+import { branchesApi, type BranchDto } from '@/services/branches'
+import { hasPermission } from '@/lib/permissions'
 import { PageHeader, SearchInput, EmptyState, Pill, Field, TableScroll, Th, Td } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +29,8 @@ export default function Students() {
   const [reloadKey, setReloadKey] = useState(0)
   const [editStudent, setEditStudent] = useState<StudentDto | 'new' | null>(null)
   const [accountFor, setAccountFor] = useState<StudentDto | null>(null)
+  const [transferFor, setTransferFor] = useState<StudentDto | null>(null)
+  const canTransfer = hasPermission('Students.Transfer')
 
   useEffect(() => {
     let alive = true
@@ -101,6 +105,11 @@ export default function Students() {
                     {canManage && (
                       <Td>
                         <div className="flex gap-1">
+                          {canTransfer && (
+                            <Button variant="ghost" size="icon" className="h-9 w-9" title={L('\u0646\u0642\u0644 \u0627\u0644\u0637\u0627\u0644\u0628 \u0625\u0644\u0649 \u0641\u0631\u0639 \u0622\u062e\u0631', 'Transfer to another branch')} onClick={() => setTransferFor(s)}>
+                              <ArrowLeftRight className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" className="h-9 w-9" title={L('تعديل', 'Edit')} onClick={() => setEditStudent(s)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -136,6 +145,7 @@ export default function Students() {
 
       <StudentDialog target={editStudent} onClose={() => setEditStudent(null)} onSaved={reload} />
       <AccountDialog student={accountFor} onClose={() => setAccountFor(null)} />
+      <TransferDialog student={transferFor} onClose={() => setTransferFor(null)} onDone={reload} />
     </div>
   )
 }
@@ -188,6 +198,67 @@ function StudentDialog({ target, onClose, onSaved }: { target: StudentDto | 'new
         <DialogFooter className="gap-2">
           <Button variant="outline" className="min-h-[44px]" onClick={onClose}>{t('common.cancel')}</Button>
           <Button className="min-h-[44px]" onClick={save} disabled={saving}>{t('common.save')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function TransferDialog({ student, onClose, onDone }: { student: StudentDto | null; onClose: () => void; onDone: () => void }) {
+  const { t, lang } = useI18n()
+  const L = (ar: string, en: string) => (lang === 'ar' ? ar : en)
+  const [branches, setBranches] = useState<BranchDto[]>([])
+  const [target, setTarget] = useState('')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!student) return
+    setTarget('')
+    setReason('')
+    branchesApi.list()
+      .then((r) => setBranches(r.filter((b) => b.isActive)))
+      .catch((e) => toast.error(errText(e)))
+  }, [student])
+
+  const save = async () => {
+    if (!student || !target || !reason.trim()) { toast.error(t('common.required')); return }
+    setSaving(true)
+    try {
+      await studentsApi.transfer(student.id, { targetBranchId: Number(target), reason: reason.trim() })
+      toast.success(L('\u062a\u0645 \u0646\u0642\u0644 \u0627\u0644\u0637\u0627\u0644\u0628', 'Student transferred'))
+      onDone()
+      onClose()
+    } catch (e) {
+      toast.error(errText(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={student !== null} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{L('\u0646\u0642\u0644 \u0627\u0644\u0637\u0627\u0644\u0628 \u0625\u0644\u0649 \u0641\u0631\u0639 \u0622\u062e\u0631', 'Transfer to another branch')}{student ? ' - ' + student.fullName : ''}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {L('\u064a\u0646\u062a\u0642\u0644 \u0627\u0644\u0637\u0627\u0644\u0628 \u0645\u0639 \u062d\u0633\u0627\u0628 \u062f\u062e\u0648\u0644\u0647 \u0625\u0644\u0649 \u0627\u0644\u0641\u0631\u0639 \u0627\u0644\u062c\u062f\u064a\u062f. \u064a\u064f\u0631\u0641\u0636 \u0627\u0644\u0646\u0642\u0644 \u0625\u0630\u0627 \u0643\u0627\u0646 \u0644\u062f\u064a\u0647 \u062a\u0633\u062c\u064a\u0644\u0627\u062a \u0623\u0648 \u0623\u0642\u0633\u0627\u0637 \u0645\u0641\u062a\u0648\u062d\u0629\u060c \u0648\u062a\u0638\u0647\u0631 \u0644\u0643 \u0631\u0633\u0627\u0644\u0629 \u0628\u0627\u0644\u0633\u0628\u0628.', 'The student moves with the sign-in account to the new branch. The transfer is refused while the student has open enrollments or installments, and the reason is shown.')}
+        </p>
+        <div className="space-y-3">
+          <select className="h-11 w-full rounded-md border bg-background px-3 text-sm" value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">{L('\u0627\u062e\u062a\u0631 \u0627\u0644\u0641\u0631\u0639 \u0627\u0644\u062c\u062f\u064a\u062f', 'Choose the new branch')}</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+          <Input
+            className="min-h-[44px]" maxLength={300}
+            placeholder={L('\u0633\u0628\u0628 \u0627\u0644\u0646\u0642\u0644 (\u0645\u0637\u0644\u0648\u0628)', 'Reason (required)')}
+            value={reason} onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" className="min-h-[44px]" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button className="min-h-[44px]" onClick={save} disabled={saving || !target || !reason.trim()}>{L('\u0646\u0642\u0644', 'Transfer')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
