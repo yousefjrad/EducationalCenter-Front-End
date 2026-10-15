@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import {
   LayoutDashboard, ClipboardList, BookOpen, Layers, CalendarDays, GraduationCap, Users2,
   Wallet, ClipboardCheck, Award, ReceiptText, BarChart3, ShieldCheck,
-  ScrollText, Settings as SettingsIcon, Bell, LogOut, Menu, Languages, X,
+  ScrollText, Settings as SettingsIcon, Bell, LogOut, Menu, Languages, X, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
@@ -20,6 +20,8 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { fmtDate, initials } from '@/lib/format'
+import { branchesApi, type BranchDto } from '@/services/branches'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface NavItem {
   to: string
@@ -218,6 +220,49 @@ function NotificationsBell() {
     </Popover>
   )
 }
+function BranchSwitcher() {
+  const { t } = useI18n()
+  const { user, isSuperAdmin, activeBranchId, setActiveBranch } = useAuth()
+  const [branches, setBranches] = useState<BranchDto[]>([])
+
+  useEffect(() => {
+    let alive = true
+    branchesApi.list()
+      .then((r) => { if (alive) setBranches(r) })
+      .catch(() => { /* not allowed to list branches: nothing to show */ })
+    return () => { alive = false }
+  }, [])
+
+  if (isSuperAdmin) {
+    return (
+      <Select
+        value={activeBranchId ? String(activeBranchId) : 'all'}
+        onValueChange={(v) => setActiveBranch(v === 'all' ? null : Number(v))}
+      >
+        <SelectTrigger className="h-11 w-[150px] gap-2 sm:w-[220px]" aria-label={t('branch.switcher')}>
+          <Building2 className="h-4 w-4 shrink-0" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{t('branch.all')}</SelectItem>
+          {branches.map((b) => (
+            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  const own = branches.find((b) => b.id === user?.branchId)
+  if (!own) return null
+  return (
+    <div className="hidden items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold sm:flex">
+      <Building2 className="h-4 w-4" />
+      <span className="max-w-[160px] truncate">{own.name}</span>
+    </div>
+  )
+}
+
 export default function AppLayout() {
   const { t, lang, setLang } = useI18n()
   const { user: authUser, logout } = useAuth()
@@ -262,6 +307,8 @@ export default function AppLayout() {
           >
             <Languages className="h-5 w-5" />
           </Button>
+
+          <BranchSwitcher />
 
           <NotificationsBell />
 

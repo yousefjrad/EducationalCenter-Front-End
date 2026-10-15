@@ -1,6 +1,7 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5080/api/v1'
 const ACCESS_KEY = 'token'
 const REFRESH_KEY = 'refreshToken'
+const BRANCH_KEY = 'branchId'
 
 export class ApiError extends Error {
   constructor(status, message, body) {
@@ -12,6 +13,17 @@ export class ApiError extends Error {
 }
 
 export const getAccessToken = () => localStorage.getItem(ACCESS_KEY)
+
+// Super admin only: the branch they work in. The server ignores this header for everybody else.
+export function getActiveBranchId() {
+  const v = Number(localStorage.getItem(BRANCH_KEY))
+  return Number.isInteger(v) && v > 0 ? v : null
+}
+
+export function setActiveBranchId(id) {
+  if (id) localStorage.setItem(BRANCH_KEY, String(id))
+  else localStorage.removeItem(BRANCH_KEY)
+}
 
 export function setSession(data) {
   const access = data?.accessToken ?? data?.token
@@ -79,6 +91,8 @@ async function request(method, endpoint, { body, params, blob = false, retry = t
   const headers = {}
   const token = getAccessToken()
   if (token) headers.Authorization = 'Bearer ' + token
+  const branchId = getActiveBranchId()
+  if (branchId) headers['X-Branch-Id'] = String(branchId)
   let payload
   if (body instanceof FormData) payload = body
   else if (body !== undefined) {

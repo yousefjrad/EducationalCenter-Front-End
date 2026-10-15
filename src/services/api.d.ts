@@ -7,6 +7,8 @@ export class ApiError extends Error {
 export const getAccessToken: () => string | null
 export function setSession(data: any): void
 export function clearSession(): void
+export function getActiveBranchId(): number | null
+export function setActiveBranchId(id: number | null): void
 export const api: {
   get<T = any>(endpoint: string, params?: Record<string, any>): Promise<T>
   post<T = any>(endpoint: string, body?: any): Promise<T>

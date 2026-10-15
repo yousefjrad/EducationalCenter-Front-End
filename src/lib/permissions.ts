@@ -25,6 +25,13 @@ const MAP: Record<PermissionKey, string[] | null> = {
   'Users.Manage': ['Users.Create'],
   'Audit.View': ['AuditLog.View'],
   'Settings.Manage': ['Settings.Update'],
+  'Branches.View': ['Branches.View'],
+  'Branches.Manage': ['Branches.Manage'],
+  'Budgets.View': ['Budgets.View'],
+  'Budgets.Request': ['Budgets.Request'],
+  'Budgets.Approve': ['Budgets.Approve'],
+  'Reports.CrossBranch': ['Reports.CrossBranch'],
+  'Students.Transfer': ['Students.Transfer'],
 }
 
 let active = new Set<string>()
