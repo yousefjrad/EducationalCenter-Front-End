@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BookOpen, Plus, Pencil, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
+import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { coursesApi, type CourseDto, type CourseInput } from '@/services/courses'
@@ -24,7 +25,8 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : String(e))
 export default function Courses() {
   const { t, lang } = useI18n()
   const L = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  const canManage = useCan('Courses.Manage')
+  const { isSuperAdmin, activeBranchId } = useAuth()
+  const canManage = useCan('Courses.Manage') && !(isSuperAdmin && !activeBranchId)
   const [q, setQ] = useState('')
   const [items, setItems] = useState<CourseDto[]>([])
   const [total, setTotal] = useState(0)
