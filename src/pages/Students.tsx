@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { GraduationCap, Plus, Pencil, Power, KeyRound, ArrowLeftRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
+import { BranchBadge } from '@/lib/branchNames'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { studentsApi, type StudentDto } from '@/services/students'
@@ -99,7 +100,7 @@ export default function Students() {
               <tbody>
                 {items.map((s) => (
                   <tr key={s.id} className="border-b last:border-0 hover:bg-muted/40">
-                    <Td><span className="font-bold">{s.fullName}</span></Td>
+                    <Td><span className="font-bold">{s.fullName}</span><BranchBadge ids={s.branchId} /></Td>
                     <Td><span className="tnum" dir="ltr">{s.phoneNumber}</span></Td>
                     <Td>{s.isActive ? <Pill tone="green">{t('common.active')}</Pill> : <Pill tone="gray">{t('common.inactive')}</Pill>}</Td>
                     {canManage && (

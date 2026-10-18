@@ -3,6 +3,7 @@ import { Users2, Plus, Pencil, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
 import { useAuth } from '@/lib/auth'
+import { BranchBadge } from '@/lib/branchNames'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { trainersApi, type TrainerDto, type TrainerInput, type PayType, type PayCurrency } from '@/services/trainers'
@@ -146,7 +147,7 @@ export default function Trainers() {
                     {x.fullName[0]}
                   </div>
                   <div>
-                    <div className="font-extrabold">{x.fullName}</div>
+                    <div className="font-extrabold">{x.fullName}<BranchBadge ids={x.branchIds} /></div>
                     <div className="text-xs text-muted-foreground">{x.specialty ?? ''}</div>
                   </div>
                 </div>
