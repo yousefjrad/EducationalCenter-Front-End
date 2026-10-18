@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Users2, Plus, Pencil, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
+import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { trainersApi, type TrainerDto, type TrainerInput, type PayType, type PayCurrency } from '@/services/trainers'
@@ -21,7 +22,8 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : String(e))
 export default function Trainers() {
   const { t, lang } = useI18n()
   const L = (ar: string, en: string) => (lang === 'ar' ? ar : en)
-  const canManage = useCan('Trainers.Manage')
+  const { isSuperAdmin, activeBranchId } = useAuth()
+  const canManage = useCan('Trainers.Manage') && !(isSuperAdmin && !activeBranchId)
   const [q, setQ] = useState('')
   const [items, setItems] = useState<TrainerDto[]>([])
   const [loading, setLoading] = useState(true)
