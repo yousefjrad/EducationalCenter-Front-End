@@ -6,6 +6,7 @@ export interface StudentDto {
   fullName: string
   phoneNumber: string
   isActive: boolean
+  branchId?: number
 }
 
 export interface StudentInput {

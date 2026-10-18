@@ -10,6 +10,7 @@ export interface CourseDto {
   defaultDurationHours: number
   defaultPrice: number
   isActive: boolean
+  branchIds?: number[] | null
 }
 
 export interface CourseInput {

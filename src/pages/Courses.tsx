@@ -3,6 +3,7 @@ import { BookOpen, Plus, Pencil, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
 import { useAuth } from '@/lib/auth'
+import { BranchBadge } from '@/lib/branchNames'
 import { useI18n } from '@/lib/i18n'
 import { ApiError } from '@/services/api'
 import { coursesApi, type CourseDto, type CourseInput } from '@/services/courses'
@@ -146,7 +147,7 @@ export default function Courses() {
               <div key={c.id} className="rounded-xl border bg-card p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-extrabold">{c.name}</div>
+                    <div className="font-extrabold">{c.name}<BranchBadge ids={c.branchIds} /></div>
                     <div className="text-xs text-muted-foreground" dir="ltr">{c.code}</div>
                   </div>
                   <Pill tone={tone(c.level)}>{levelLabel(c.level)}</Pill>
@@ -186,7 +187,7 @@ export default function Courses() {
                   {items.map((c) => (
                     <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40">
                       <Td>
-                        <div className="font-bold">{c.name}</div>
+                        <div className="font-bold">{c.name}<BranchBadge ids={c.branchIds} /></div>
                         <div className="text-xs text-muted-foreground" dir="ltr">{c.code}</div>
                       </Td>
                       <Td className="max-w-[300px]"><span className="line-clamp-2 text-muted-foreground">{c.description}</span></Td>

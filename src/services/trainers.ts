@@ -13,6 +13,7 @@ export interface TrainerDto {
   payValue: number
   payCurrency: PayCurrency
   isActive: boolean
+  branchIds?: number[] | null
 }
 
 export interface TrainerInput {
