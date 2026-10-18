@@ -1,3 +1,4 @@
+import { BranchBadge } from '@/lib/branchNames'
 import { useEffect, useMemo, useState } from 'react'
 import { Award, BadgeCheck, FileText, Loader2, Save, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
@@ -296,7 +297,7 @@ export default function Certificates() {
                         {c.isOverride && <Pill tone="amber" className="ms-2">{L.exception}</Pill>}
                         {c.overrideReason && <div className="mt-1 text-[11px] text-muted-foreground">{c.overrideReason}</div>}
                       </td>
-                      <td className={td}><b>{c.studentName}</b></td>
+                      <td className={td}><b>{c.studentName}</b><BranchBadge ids={c.branchId} /></td>
                       <td className={td}>{c.sectionName}<div className="text-xs text-muted-foreground">{c.courseName}</div></td>
                       <td className={td}><span className="tnum">{c.issuedAt.slice(0, 10)}</span></td>
                       <td className={td}>

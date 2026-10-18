@@ -22,6 +22,7 @@ export interface PaymentDto {
   cancelReason: string | null
   receiptId: number | null
   receiptNumber: string | null
+  branchId?: number
 }
 
 export interface InstallmentDto {

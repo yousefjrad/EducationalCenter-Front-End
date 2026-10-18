@@ -1,3 +1,4 @@
+import { BranchBadge } from '@/lib/branchNames'
 import { useEffect, useState } from 'react'
 import { Calculator, Loader2, Pencil, Plus, ReceiptText, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
@@ -246,7 +247,7 @@ export default function Expenses() {
                   {eItems.map((x) => (
                     <tr key={x.id}>
                       <td className={td}><Pill tone="blue">{x.category}</Pill></td>
-                      <td className={td}>{x.description}</td>
+                      <td className={td}>{x.description}<BranchBadge ids={x.branchId} /></td>
                       <td className={td}><span className="tnum" dir="ltr">{money(x.currency, x.amount)}</span>
                         {x.currency === 'Usd' && x.exchangeRate && <div className="tnum text-[11px] text-muted-foreground">x {n0(x.exchangeRate)}</div>}
                       </td>
@@ -298,7 +299,7 @@ export default function Expenses() {
                 <tbody>
                   {pItems.map((p) => (
                     <tr key={p.id}>
-                      <td className={td}><b>{p.trainerName}</b></td>
+                      <td className={td}><b>{p.trainerName}</b><BranchBadge ids={p.branchId} /></td>
                       <td className={td}><span className="tnum">{p.periodStart.slice(0, 10)}<br />{p.periodEnd.slice(0, 10)}</span></td>
                       <td className={td}><span className="text-xs text-muted-foreground" dir="ltr">{p.calculationMethod}</span></td>
                       <td className={td}><span className="tnum" dir="ltr">{money(p.currency, p.amount)}</span></td>

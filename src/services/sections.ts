@@ -25,6 +25,7 @@ export interface SectionDto {
   minStudents: number
   status: SectionStatus
   schedules: SectionScheduleDto[]
+  branchId?: number
 }
 
 export interface SectionInput {

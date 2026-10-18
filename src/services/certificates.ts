@@ -23,6 +23,7 @@ export interface CertificateDto {
   issuedAt: string
   isOverride: boolean
   overrideReason: string | null
+  branchId?: number
 }
 
 export interface EligibilityDto {

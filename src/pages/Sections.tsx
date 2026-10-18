@@ -1,3 +1,4 @@
+import { BranchBadge } from '@/lib/branchNames'
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { Layers, Plus, Pencil, Users, MapPin, Clock, XCircle, Trash2, DoorOpen } from 'lucide-react'
@@ -254,7 +255,7 @@ export default function Sections() {
               <div key={sec.id} className="flex flex-col rounded-xl border bg-card p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <button className="min-w-0 text-start" onClick={() => setDetail(sec)}>
-                    <div className="font-extrabold leading-snug hover:text-primary">{sec.name}</div>
+                    <div className="font-extrabold leading-snug hover:text-primary">{sec.name}<BranchBadge ids={sec.branchId} /></div>
                     <div className="text-xs text-muted-foreground">{sec.courseName}</div>
                   </button>
                   <Pill tone={statusTone[sec.status]}>{statusLabel(sec.status)}</Pill>

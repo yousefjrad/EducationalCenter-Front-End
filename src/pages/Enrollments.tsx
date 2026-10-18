@@ -1,3 +1,4 @@
+import { BranchBadge } from '@/lib/branchNames'
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardList, Hourglass, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -244,7 +245,7 @@ export default function Enrollments() {
                 <tbody>
                   {eItems.map((e) => (
                     <tr key={e.id} className="last:[&>td]:border-0">
-                      <td className={td}><b>{e.studentName}</b></td>
+                      <td className={td}><b>{e.studentName}</b><BranchBadge ids={e.branchId} /></td>
                       <td className={td}>{e.sectionName}<div className="text-xs text-muted-foreground">{e.courseName}</div></td>
                       <td className={td}><span className="tnum">{e.agreedPrice}</span></td>
                       <td className={td}>

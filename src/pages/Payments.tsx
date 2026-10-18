@@ -1,3 +1,4 @@
+import { BranchBadge } from '@/lib/branchNames'
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, FileText, Wallet, Layers } from 'lucide-react'
 import { toast } from 'sonner'
@@ -227,7 +228,7 @@ export default function Payments() {
                   {items.map((p) => (
                     <tr key={p.id}>
                       <td className={td}><span className="tnum" dir="ltr">{p.receiptNumber ?? '-'}</span></td>
-                      <td className={td}><b>{p.studentName}</b></td>
+                      <td className={td}><b>{p.studentName}</b><BranchBadge ids={p.branchId} /></td>
                       <td className={td}>{p.sectionName}</td>
                       <td className={td}><span className="tnum">#{p.installmentNumber}</span></td>
                       <td className={td}><span className="tnum" dir="ltr">{p.currency === 'Usd' ? `$${p.amountPaid}` : n0(p.amountPaid)}</span>

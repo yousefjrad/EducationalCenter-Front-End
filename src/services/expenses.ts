@@ -14,6 +14,7 @@ export interface ExpenseDto {
   amountInSyp: number
   expenseDate: string
   recordedByUserId: number
+  branchId?: number
 }
 
 export interface ExpenseBody {
@@ -39,6 +40,7 @@ export interface PayrollDto {
   status: PayrollStatus
   paidAt: string | null
   paidByUserId: number | null
+  branchId?: number
 }
 
 export interface PayrollCalcDto {

@@ -15,6 +15,7 @@ export interface EnrollmentDto {
   enrolledAt: string
   holdExpiresAt: string | null
   transferredFromEnrollmentId: number | null
+  branchId?: number
 }
 
 export interface WaitingEntryDto {
