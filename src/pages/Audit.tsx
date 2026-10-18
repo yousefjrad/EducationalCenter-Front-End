@@ -9,8 +9,9 @@ import { auditApi, type AuditLogDto } from '@/services/audit'
 
 const L = {
   title: '\u0633\u062c\u0644 \u0627\u0644\u062a\u062f\u0642\u064a\u0642',
-  subtitle: '\u0633\u062c\u0644 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u0644\u0643\u0644 \u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0645\u0627\u0644\u064a\u0629 \u0627\u0644\u062d\u0633\u0627\u0633\u0629',
+  subtitle: '\u0633\u062c\u0644 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u0644\u0643\u0644 \u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0645\u0647\u0645\u0629',
   entity: '\u0627\u0644\u0643\u064a\u0627\u0646',
+  branch: '\u0627\u0644\u0641\u0631\u0639',
   entityHint: '\u0627\u0644\u0643\u064a\u0627\u0646 (\u0645\u062b\u0644\u0627\u064b Payment)',
   action: '\u0627\u0644\u0639\u0645\u0644\u064a\u0629',
   actionHint: '\u0627\u0644\u0639\u0645\u0644\u064a\u0629 (\u0645\u062b\u0644\u0627\u064b Create)',
@@ -84,7 +85,7 @@ export default function Audit() {
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <input className={field} list="audit-entities" placeholder={L.entityHint} value={entity} onChange={(e) => setEntity(e.target.value)} />
         <datalist id="audit-entities">
-          <option value="Payment" /><option value="Expense" /><option value="TrainerPayroll" /><option value="Certificate" />
+          <option value="Payment" /><option value="Expense" /><option value="TrainerPayroll" /><option value="Certificate" /><option value="Course" /><option value="Room" /><option value="Section" /><option value="Student" /><option value="Branch" /><option value="Budget" />
         </datalist>
         <input className={field} placeholder={L.actionHint} value={action} onChange={(e) => setAction(e.target.value)} />
         <input type="date" className={field} title={L.from} value={from} onChange={(e) => { setFrom(e.target.value); setPage(1) }} />
@@ -101,7 +102,7 @@ export default function Audit() {
             <thead>
               <tr>
                 <th className={th}>{L.date}</th><th className={th}>{L.user}</th><th className={th}>{L.action}</th>
-                <th className={th}>{L.entity}</th><th className={th}>{L.reason}</th><th className={th}></th>
+                <th className={th}>{L.entity}</th><th className={th}>{L.branch}</th><th className={th}>{L.reason}</th><th className={th}></th>
               </tr>
             </thead>
             <tbody>
@@ -111,6 +112,7 @@ export default function Audit() {
                   <td className={td}><b>{a.userName}</b></td>
                   <td className={td}><Pill tone={tone(a.action)}>{a.action}</Pill></td>
                   <td className={td}><span className="text-xs text-muted-foreground" dir="ltr">{a.entityName} #{a.entityId}</span></td>
+                  <td className={td}><span className="text-sm">{a.branchName ?? '-'}</span></td>
                   <td className={td}><span className="text-sm">{a.reason ?? '-'}</span></td>
                   <td className={td}>
                     <Button variant="ghost" size="icon" className="h-9 w-9" title={L.details} onClick={() => setView(a)}><Eye className="h-4 w-4" /></Button>

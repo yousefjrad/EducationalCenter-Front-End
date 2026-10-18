@@ -11,6 +11,8 @@ export interface AuditLogDto {
   newValues: string | null
   reason: string | null
   createdAt: string
+  branchId?: number | null
+  branchName?: string | null
 }
 
 export interface AuditPage {
