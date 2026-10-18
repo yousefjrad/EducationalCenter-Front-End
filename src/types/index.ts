@@ -26,6 +26,7 @@ export type PermissionKey =
   | 'Branches.View' | 'Branches.Manage'
   | 'Budgets.View' | 'Budgets.Request' | 'Budgets.Approve'
   | 'Reports.CrossBranch' | 'Students.Transfer'
+  | 'Courses.Delete' | 'Trainers.Delete' | 'Students.Delete'
 
 export interface Role {
   id: ID

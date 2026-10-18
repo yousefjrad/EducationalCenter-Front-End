@@ -27,4 +27,5 @@ export const coursesApi = {
     api.get<Paged<CourseDto>>('/courses', params),
   create: (body: CourseInput) => api.post<CourseDto>('/courses', body),
   update: (id: number, body: CourseInput & { isActive: boolean }) => api.put<CourseDto>('/courses/' + id, body),
+  remove: (id: number) => api.delete<unknown>('/courses/' + id),
 }

@@ -32,6 +32,9 @@ const MAP: Record<PermissionKey, string[] | null> = {
   'Budgets.Approve': ['Budgets.Approve'],
   'Reports.CrossBranch': ['Reports.CrossBranch'],
   'Students.Transfer': ['Students.Transfer'],
+  'Courses.Delete': ['Courses.Delete'],
+  'Trainers.Delete': ['Trainers.Delete'],
+  'Students.Delete': ['Students.Delete'],
 }
 
 let active = new Set<string>()

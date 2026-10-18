@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, Plus, Pencil, Power } from 'lucide-react'
+import { BookOpen, Plus, Pencil, Power, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
 import { useAuth } from '@/lib/auth'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const LEVELS = ['beginner', 'intermediate', 'advanced', 'all']
@@ -28,6 +29,9 @@ export default function Courses() {
   const L = (ar: string, en: string) => (lang === 'ar' ? ar : en)
   const { isSuperAdmin, activeBranchId } = useAuth()
   const canManage = useCan('Courses.Manage') && !(isSuperAdmin && !activeBranchId)
+  const canDelete = useCan('Courses.Delete') && !(isSuperAdmin && !activeBranchId)
+  const [confirmDelete, setConfirmDelete] = useState<CourseDto | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [q, setQ] = useState('')
   const [items, setItems] = useState<CourseDto[]>([])
   const [total, setTotal] = useState(0)
@@ -110,6 +114,22 @@ export default function Courses() {
     }
   }
 
+  const doDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await coursesApi.remove(confirmDelete.id)
+      toast.success(L('\u062a\u0645 \u0627\u0644\u062d\u0630\u0641', 'Deleted'))
+      setConfirmDelete(null)
+      reload()
+    } catch (e) {
+      toast.error(errText(e))
+      setConfirmDelete(null)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const levelLabel = (l: string | null) => (l && LEVELS.includes(l) ? t('courses.level.' + l) : l ?? '-')
   const tone = (l: string | null) => (l && levelTone[l]) || 'gray'
   const money = (n: number) => Number(n).toLocaleString('en-US') + ' ' + L('ل.س', 'SYP')
@@ -161,6 +181,7 @@ export default function Courses() {
                   {canManage && (
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                      {canDelete && <Button variant="ghost" size="icon" className="h-11 w-11 text-destructive" onClick={() => setConfirmDelete(c)}><Trash2 className="h-4 w-4" /></Button>}
                       <Button variant="ghost" size="icon" className={cnActive(c.isActive)} onClick={() => toggleActive(c)}><Power className="h-4 w-4" /></Button>
                     </div>
                   )}
@@ -199,6 +220,7 @@ export default function Courses() {
                         <Td>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                            {canDelete && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => setConfirmDelete(c)}><Trash2 className="h-4 w-4" /></Button>}
                             <Button variant="ghost" size="icon" className={cnActive(c.isActive)} onClick={() => toggleActive(c)}><Power className="h-4 w-4" /></Button>
                           </div>
                         </Td>
@@ -211,6 +233,23 @@ export default function Courses() {
           </div>
         </>
       )}
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{L('\u062d\u0630\u0641 \u0627\u0644\u0645\u0627\u062f\u0629', 'Delete course')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {L('\u0647\u0644 \u0623\u0646\u062a \u0645\u062a\u0623\u0643\u062f \u0645\u0646 \u062d\u0630\u0641', 'Are you sure you want to delete')} <b>{confirmDelete?.name}</b>{'\u061f'} {L('\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621.', 'This cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="min-h-[44px]">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction className="min-h-[44px] bg-destructive text-white hover:bg-destructive/90" disabled={deleting} onClick={doDelete}>
+              {L('\u062d\u0630\u0641', 'Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">

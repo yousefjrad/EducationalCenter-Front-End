@@ -30,4 +30,5 @@ export const trainersApi = {
     api.get<Paged<TrainerDto>>('/trainers', params),
   create: (body: TrainerInput) => api.post<TrainerDto>('/trainers', body),
   update: (id: number, body: TrainerInput & { isActive: boolean }) => api.put<TrainerDto>('/trainers/' + id, body),
+  remove: (id: number) => api.delete<unknown>('/trainers/' + id),
 }
