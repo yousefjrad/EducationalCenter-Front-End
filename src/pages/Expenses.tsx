@@ -169,6 +169,7 @@ export default function Expenses() {
       reload()
     } catch (e) {
       toast.error(errMsg(e))
+      if (String(errMsg(e)).includes('changed by another user')) { after?.(); reload() }
     } finally {
       setBusy(false)
     }
