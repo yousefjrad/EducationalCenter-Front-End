@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { useI18n } from '@/lib/i18n'
@@ -51,7 +51,7 @@ export default function RoomsDialog({ open, onClose, onChanged }: { open: boolea
     setSaving(true)
     try {
       const body = { name: name.trim(), capacity: cap, description: editing?.description ?? null, location: location.trim() || null }
-      if (editing) await roomsApi.update(editing.id, { ...body, isActive: editing.isActive })
+      if (editing) await roomsApi.update(editing.id, { ...body, isActive: editing.isActive, rowVersion: editing.rowVersion })
       else await roomsApi.create(body)
       toast.success(t('common.saved'))
       reset()
@@ -66,7 +66,7 @@ export default function RoomsDialog({ open, onClose, onChanged }: { open: boolea
 
   const toggle = async (r: RoomDto) => {
     try {
-      await roomsApi.update(r.id, { name: r.name, capacity: r.capacity, description: r.description, location: r.location, isActive: !r.isActive })
+      await roomsApi.update(r.id, { name: r.name, capacity: r.capacity, description: r.description, location: r.location, isActive: !r.isActive, rowVersion: r.rowVersion })
       load()
       onChanged()
     } catch (e) {

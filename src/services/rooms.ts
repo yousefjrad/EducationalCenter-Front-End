@@ -8,6 +8,7 @@ export interface RoomDto {
   description: string | null
   location: string | null
   isActive: boolean
+  rowVersion?: string | null
 }
 
 export interface RoomInput {
@@ -21,5 +22,5 @@ export const roomsApi = {
   list: (params?: { search?: string; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get<Paged<RoomDto>>('/rooms', params),
   create: (body: RoomInput) => api.post<RoomDto>('/rooms', body),
-  update: (id: number, body: RoomInput & { isActive: boolean }) => api.put<RoomDto>('/rooms/' + id, body),
+  update: (id: number, body: RoomInput & { isActive: boolean; rowVersion?: string | null }) => api.put<RoomDto>('/rooms/' + id, body),
 }

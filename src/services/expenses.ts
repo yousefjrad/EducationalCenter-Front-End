@@ -15,6 +15,7 @@ export interface ExpenseDto {
   expenseDate: string
   recordedByUserId: number
   branchId?: number
+  rowVersion?: string | null
 }
 
 export interface ExpenseBody {
@@ -79,7 +80,7 @@ export const expensesApi = {
     api.get(`/expenses?${qs(q)}`) as Promise<PageOf<ExpenseDto>>,
   categories: () => api.get('/expenses/categories') as Promise<string[]>,
   create: (b: ExpenseBody) => api.post('/expenses', b) as Promise<ExpenseDto>,
-  update: (id: number, b: ExpenseBody) => api.put(`/expenses/${id}`, b) as Promise<ExpenseDto>,
+  update: (id: number, b: ExpenseBody & { rowVersion?: string | null }) => api.put(`/expenses/${id}`, b) as Promise<ExpenseDto>,
 }
 
 export interface PayrollRequest {

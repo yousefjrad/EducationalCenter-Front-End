@@ -26,6 +26,7 @@ export interface SectionDto {
   status: SectionStatus
   schedules: SectionScheduleDto[]
   branchId?: number
+  rowVersion?: string | null
 }
 
 export interface SectionInput {
@@ -43,7 +44,7 @@ export const sectionsApi = {
   list: (params?: { search?: string; status?: SectionStatus; page?: number; pageSize?: number }) =>
     api.get<Paged<SectionDto>>('/sections', params),
   create: (body: SectionInput & { courseId: number; price: number | null }) => api.post<SectionDto>('/sections', body),
-  update: (id: number, body: SectionInput & { price: number }) => api.put<SectionDto>('/sections/' + id, body),
+  update: (id: number, body: SectionInput & { price: number; rowVersion?: string | null }) => api.put<SectionDto>('/sections/' + id, body),
   changeStatus: (id: number, status: SectionStatus) => api.post<SectionDto>('/sections/' + id + '/status', { status }),
   remove: (id: number) => api.delete<unknown>('/sections/' + id),
 }

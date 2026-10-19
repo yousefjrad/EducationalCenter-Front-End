@@ -164,7 +164,7 @@ export default function Sections() {
     }
     setSaving(true)
     try {
-      if (editing) await sectionsApi.update(editing.id, { ...base, price: Number(form.price) || 0 })
+      if (editing) await sectionsApi.update(editing.id, { ...base, price: Number(form.price) || 0, rowVersion: editing.rowVersion })
       else await sectionsApi.create({ ...base, courseId: Number(form.courseId), price: form.price.trim() === '' ? null : Number(form.price) })
       toast.success(t('common.saved'))
       setOpen(false)

@@ -186,7 +186,7 @@ export default function Expenses() {
       exchangeRate: xCur === 'Usd' ? Number(xRate) : null, expenseDate: xDate,
     }
     return act(
-      () => (expDlg === 'new' || expDlg === null ? expensesApi.create(body) : expensesApi.update(expDlg.id, body)),
+      () => (expDlg === 'new' || expDlg === null ? expensesApi.create(body) : expensesApi.update(expDlg.id, { ...body, rowVersion: expDlg.rowVersion })),
       L.saved, () => setExpDlg(null),
     )
   }
