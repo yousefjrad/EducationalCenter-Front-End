@@ -1,5 +1,6 @@
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useEffect, useState } from 'react'
-import { GraduationCap, Plus, Pencil, Power, KeyRound, ArrowLeftRight } from 'lucide-react'
+import { GraduationCap, Plus, Pencil, Power, KeyRound, ArrowLeftRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCan } from '@/lib/can'
 import { BranchBadge } from '@/lib/branchNames'
@@ -20,6 +21,7 @@ export default function Students() {
   const { t, lang } = useI18n()
   const L = (ar: string, en: string) => (lang === 'ar' ? ar : en)
   const canManage = useCan('Students.Manage')
+  const canDelete = useCan('Students.Delete') && canManage
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<StudentDto[]>([])
@@ -125,6 +127,41 @@ export default function Students() {
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          {canDelete && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" title={L('\u062d\u0630\u0641', 'Delete')}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{L('\u062d\u0630\u0641 \u0627\u0644\u0637\u0627\u0644\u0628', 'Delete student')}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {L('\u0647\u0644 \u0623\u0646\u062a \u0645\u062a\u0623\u0643\u062f \u0645\u0646 \u062d\u0630\u0641', 'Are you sure you want to delete')} <b>{s.fullName}</b>{'\u061f'} {L('\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062c\u0631\u0627\u0621.', 'This cannot be undone.')}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="gap-2">
+                                  <AlertDialogCancel className="min-h-[44px]">{t('common.cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="min-h-[44px] bg-destructive text-white hover:bg-destructive/90"
+                                    onClick={async () => {
+                                      try {
+                                        await studentsApi.remove(s.id)
+                                        toast.success(L('\u062a\u0645 \u0627\u0644\u062d\u0630\u0641', 'Deleted'))
+                                        reload()
+                                      } catch (e) {
+                                        toast.error(errText(e))
+                                      }
+                                    }}
+                                  >
+                                    {L('\u062d\u0630\u0641', 'Delete')}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+
                         </div>
                       </Td>
                     )}
