@@ -171,6 +171,7 @@ export default function Sections() {
       reload()
     } catch (e) {
       toast.error(errText(e))
+      if (String(errText(e)).includes('changed by another user')) { setOpen(false); reload() }
     } finally {
       setSaving(false)
     }

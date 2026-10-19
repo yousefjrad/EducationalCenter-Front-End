@@ -59,6 +59,7 @@ export default function RoomsDialog({ open, onClose, onChanged }: { open: boolea
       onChanged()
     } catch (e) {
       toast.error(errText(e))
+      if (String(errText(e)).includes('changed by another user')) { reset(); load(); onChanged() }
     } finally {
       setSaving(false)
     }
@@ -71,6 +72,7 @@ export default function RoomsDialog({ open, onClose, onChanged }: { open: boolea
       onChanged()
     } catch (e) {
       toast.error(errText(e))
+      load()
     }
   }
 
