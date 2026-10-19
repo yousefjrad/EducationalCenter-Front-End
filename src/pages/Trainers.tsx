@@ -92,7 +92,7 @@ export default function Trainers() {
     }
     setSaving(true)
     try {
-      if (editing) await trainersApi.update(editing.id, { ...body, isActive: editing.isActive })
+      if (editing) await trainersApi.update(editing.id, { ...body, isActive: editing.isActive, rowVersion: editing.rowVersion })
       else await trainersApi.create(body)
       toast.success(t('common.saved'))
       setOpen(false)
@@ -107,6 +107,7 @@ export default function Trainers() {
   const toggleActive = async (x: TrainerDto) => {
     try {
       await trainersApi.update(x.id, {
+        rowVersion: x.rowVersion,
         fullName: x.fullName, phoneNumber: x.phoneNumber, specialty: x.specialty,
         payType: x.payType, payValue: x.payValue, payCurrency: x.payCurrency, isActive: !x.isActive,
       })

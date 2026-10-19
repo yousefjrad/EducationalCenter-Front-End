@@ -7,6 +7,7 @@ export interface StudentDto {
   phoneNumber: string
   isActive: boolean
   branchId?: number
+  rowVersion?: string | null
 }
 
 export interface StudentInput {
@@ -18,7 +19,7 @@ export const studentsApi = {
   list: (params?: { search?: string; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get<Paged<StudentDto>>('/students', params),
   create: (body: StudentInput) => api.post<StudentDto>('/students', body),
-  update: (id: number, body: StudentInput & { isActive: boolean }) => api.put<StudentDto>('/students/' + id, body),
+  update: (id: number, body: StudentInput & { isActive: boolean; rowVersion?: string | null }) => api.put<StudentDto>('/students/' + id, body),
   remove: (id: number) => api.delete<unknown>('/students/' + id),
   transfer: (id: number, body: { targetBranchId: number; reason: string }) =>
     api.post<unknown>('/students/' + id + '/transfer', body),

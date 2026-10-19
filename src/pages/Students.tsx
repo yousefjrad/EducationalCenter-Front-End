@@ -52,7 +52,7 @@ export default function Students() {
 
   const toggleActive = async (s: StudentDto) => {
     try {
-      await studentsApi.update(s.id, { fullName: s.fullName, phoneNumber: s.phoneNumber, isActive: !s.isActive })
+      await studentsApi.update(s.id, { fullName: s.fullName, phoneNumber: s.phoneNumber, isActive: !s.isActive, rowVersion: s.rowVersion })
       toast.success(L(s.isActive ? 'تم التعطيل' : 'تم التفعيل', s.isActive ? 'Deactivated' : 'Activated'))
       reload()
     } catch (e) {
@@ -209,7 +209,7 @@ function StudentDialog({ target, onClose, onSaved }: { target: StudentDto | 'new
     setSaving(true)
     try {
       const body = { fullName: name.trim(), phoneNumber: phone.trim() }
-      if (editing) await studentsApi.update(editing.id, { ...body, isActive: editing.isActive })
+      if (editing) await studentsApi.update(editing.id, { ...body, isActive: editing.isActive, rowVersion: editing.rowVersion })
       else await studentsApi.create(body)
       toast.success(t('common.saved'))
       onSaved()

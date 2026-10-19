@@ -14,6 +14,7 @@ export interface TrainerDto {
   payCurrency: PayCurrency
   isActive: boolean
   branchIds?: number[] | null
+  rowVersion?: string | null
 }
 
 export interface TrainerInput {
@@ -29,6 +30,6 @@ export const trainersApi = {
   list: (params?: { search?: string; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get<Paged<TrainerDto>>('/trainers', params),
   create: (body: TrainerInput) => api.post<TrainerDto>('/trainers', body),
-  update: (id: number, body: TrainerInput & { isActive: boolean }) => api.put<TrainerDto>('/trainers/' + id, body),
+  update: (id: number, body: TrainerInput & { isActive: boolean; rowVersion?: string | null }) => api.put<TrainerDto>('/trainers/' + id, body),
   remove: (id: number) => api.delete<unknown>('/trainers/' + id),
 }

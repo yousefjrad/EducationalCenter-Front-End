@@ -89,7 +89,7 @@ export default function Courses() {
     }
     setSaving(true)
     try {
-      if (editing) await coursesApi.update(editing.id, { ...body, isActive: editing.isActive })
+      if (editing) await coursesApi.update(editing.id, { ...body, isActive: editing.isActive, rowVersion: editing.rowVersion })
       else await coursesApi.create(body)
       toast.success(t('common.saved'))
       setOpen(false)
@@ -104,6 +104,7 @@ export default function Courses() {
   const toggleActive = async (c: CourseDto) => {
     try {
       await coursesApi.update(c.id, {
+        rowVersion: c.rowVersion,
         code: c.code, name: c.name, description: c.description, level: c.level,
         defaultDurationHours: c.defaultDurationHours, defaultPrice: c.defaultPrice, isActive: !c.isActive,
       })
