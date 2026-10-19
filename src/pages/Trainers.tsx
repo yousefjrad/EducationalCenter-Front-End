@@ -99,6 +99,7 @@ export default function Trainers() {
       reload()
     } catch (e) {
       toast.error(errText(e))
+      if (String(errText(e)).includes('changed by another user')) { setOpen(false); reload() }
     } finally {
       setSaving(false)
     }
@@ -115,6 +116,7 @@ export default function Trainers() {
       reload()
     } catch (e) {
       toast.error(errText(e))
+      reload()
     }
   }
 

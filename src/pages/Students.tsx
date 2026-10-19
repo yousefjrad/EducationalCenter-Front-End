@@ -57,6 +57,7 @@ export default function Students() {
       reload()
     } catch (e) {
       toast.error(errText(e))
+      reload()
     }
   }
 
@@ -216,6 +217,7 @@ function StudentDialog({ target, onClose, onSaved }: { target: StudentDto | 'new
       onClose()
     } catch (e) {
       toast.error(errText(e))
+      if (String(errText(e)).includes('changed by another user')) { onSaved(); onClose() }
     } finally {
       setSaving(false)
     }
