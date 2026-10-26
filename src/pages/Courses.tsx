@@ -202,7 +202,7 @@ export default function Courses() {
                     <Th>{t('courses.description')}</Th>
                     <Th>{t('courses.level')}</Th>
                     <Th>{L('المدة (ساعات)', 'Hours')}</Th>
-                    <Th>{L('السعر', 'Price')}</Th>
+                    <Th>{L('السعر الافتراضي', 'Default price')}</Th>
                     <Th>{t('common.status')}</Th>
                     {canManage && <Th>{t('common.actions')}</Th>}
                   </tr>
@@ -283,8 +283,9 @@ export default function Courses() {
               <Field label={L('المدة (ساعات)', 'Duration (hours)')}>
                 <Input type="number" min={1} dir="ltr" className="min-h-[44px]" value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} />
               </Field>
-              <Field label={L('السعر (ل.س)', 'Price (SYP)')}>
+              <Field label={L('السعر الافتراضي (ل.س)', 'Default price (SYP)')}>
                 <Input type="number" min={0} dir="ltr" className="min-h-[44px]" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+<p className="mt-1 text-xs text-muted-foreground">{L('يُستخدم كسعر مبدئي عند فتح شعبة جديدة. السعر الفعلي يُحدَّد في الشعبة.', 'Used as the starting price when opening a new section. The actual price is set on the section.')}</p>
               </Field>
             </div>
           </div>

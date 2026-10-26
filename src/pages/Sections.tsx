@@ -337,6 +337,7 @@ export default function Sections() {
             </Field>
             <Field label={t('sections.price')}>
               <Input type="number" min={0} dir="ltr" className="min-h-[44px]" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+<p className="mt-1 text-xs text-muted-foreground">{L('هذا هو السعر الذي يدفعه الطالب. يُعبَّأ من السعر الافتراضي للمادة ويمكن تعديله.', 'This is the price the student pays. Prefilled from the course default price and editable.')}</p>
             </Field>
             <Field label={t('sections.capacity')} required>
               <Input type="number" min={1} dir="ltr" className="min-h-[44px]" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
