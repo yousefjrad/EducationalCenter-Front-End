@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Loader2, MapPin, Users2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useI18n } from '@/lib/i18n'
@@ -24,6 +24,13 @@ const addDays = (d: Date, n: number) => {
 }
 const startOfWeek = (d: Date) => addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -d.getDay())
 const hm = (t: string) => t.slice(0, 5)
+const MONTHS = ['كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران', 'تموز', 'آب', 'أيلول', 'تشرين الأول', 'تشرين الثاني', 'كانون الأول']
+const weekLabel = (start: Date) => {
+  const end = addDays(start, 6)
+  const a = `${start.getDate()} ${MONTHS[start.getMonth()]}`
+  const b = `${end.getDate()} ${MONTHS[end.getMonth()]} ${end.getFullYear()}`
+  return start.getFullYear() === end.getFullYear() ? `من ${a} إلى ${b}` : `من ${a} ${start.getFullYear()} إلى ${b}`
+}
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : 'حدث خطأ غير متوقع')
 
 const STATUS_AR: Record<SessionStatus, string> = {
@@ -233,11 +240,11 @@ export default function Schedule() {
       {/* week nav */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronRight className="h-4 w-4" /></Button>
-          <span className="tnum min-w-[190px] text-center text-sm font-extrabold">
-            {iso(weekStart)} → {iso(addDays(weekStart, 6))}
+          <Button variant="outline" size="icon" aria-label="الأسبوع التالي" title="الأسبوع التالي" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight className="h-4 w-4" /></Button>
+          <span className="tnum min-w-[260px] text-center text-sm font-extrabold">
+            {weekLabel(weekStart)}
           </span>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" aria-label="الأسبوع السابق" title="الأسبوع السابق" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft className="h-4 w-4" /></Button>
         </div>
         <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date()))}>هذا الأسبوع</Button>
       </div>

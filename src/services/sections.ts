@@ -27,6 +27,7 @@ export interface SectionDto {
   schedules: SectionScheduleDto[]
   branchId?: number
   rowVersion?: string | null
+  seatsTaken?: number
 }
 
 export interface SectionInput {

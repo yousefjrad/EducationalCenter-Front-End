@@ -189,7 +189,7 @@ export default function Sections() {
   }
 
   const requestStatus = (section: SectionDto, status: SectionStatus) => {
-    if (status === 'Completed' || status === 'Cancelled') setConfirmStatus({ section, status })
+    if (status === 'InProgress' || status === 'Completed' || status === 'Cancelled') setConfirmStatus({ section, status })
     else void applyStatus(section, status)
   }
 
@@ -274,7 +274,7 @@ export default function Sections() {
                 </div>
 
                 <div className="tnum mt-3 text-xs text-muted-foreground">
-                  {L('السعة', 'Capacity')}: {sec.capacity} - {L('الحد الأدنى', 'Min')}: {sec.minStudents}
+                  {L('المسجلون', 'Enrolled')}: <b>{sec.seatsTaken ?? 0} / {sec.capacity}</b> - {L('الحد الأدنى', 'Min')}: {sec.minStudents}
                 </div>
 
                 <div className="mt-4 flex items-center justify-between border-t pt-3">
@@ -408,7 +408,7 @@ export default function Sections() {
                 <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{t('sections.price')}</div><Money amount={detail.price} className="font-bold" /></div>
                 <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{t('sections.startDate')}</div><div className="tnum font-bold" dir="ltr">{detail.startDate}</div></div>
                 <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{t('sections.endDate')}</div><div className="tnum font-bold" dir="ltr">{detail.endDate}</div></div>
-                <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{t('sections.capacity')}</div><div className="tnum font-bold">{detail.capacity}</div></div>
+                <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{L('المسجلون / السعة', 'Enrolled / capacity')}</div><div className="tnum font-bold">{detail.seatsTaken ?? 0} / {detail.capacity}</div></div>
                 <div className="rounded-lg bg-muted/60 p-3"><div className="text-xs text-muted-foreground">{L('الحد الأدنى', 'Minimum')}</div><div className="tnum font-bold">{detail.minStudents}</div></div>
               </div>
               <div>
@@ -422,8 +422,12 @@ export default function Sections() {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {L('الجلسات والطلاب والمدفوعات تظهر هنا بعد ربط صفحاتها.', 'Sessions, students and payments appear here once their pages are connected.')}
+              <p className="rounded-lg bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+                {detail.status === 'Draft' ? L('مسودة: الشعبة قيد التجهيز ولا يمكن تسجيل طلاب فيها بعد. افتح التسجيل عندما تصبح جاهزة.', 'Draft: being prepared, no students can enroll yet. Open enrollment when ready.')
+                  : detail.status === 'OpenForEnrollment' ? L('التسجيل مفتوح: يمكن تسجيل الطلاب. ولّد الجلسات ثم اضغط «بدء الشعبة» عند انطلاق الدورة.', 'Enrollment open: students can enroll. Generate the sessions, then start the section when the course begins.')
+                  : detail.status === 'InProgress' ? L('الشعبة جارية: الدورة بدأت ويمكن تسجيل طلاب متأخرين. عند انتهائها اضغط «إنهاء الشعبة».', 'In progress: the course has begun; late students can still enroll. Mark it completed when it ends.')
+                  : detail.status === 'Completed' ? L('الشعبة منتهية: اكتملت الدورة وأصبحت تسجيلاتها المؤكدة «مكتملة». لا يمكن تعديلها.', 'Completed: the course is finished and confirmed enrollments are marked completed. It cannot be changed.')
+                  : L('الشعبة ملغاة: أُوقفت نهائياً وأُلغيت جلساتها المجدولة. لا يمكن التراجع.', 'Cancelled: stopped for good and its scheduled sessions were cancelled. It cannot be undone.')}
               </p>
               {canManage && NEXT[detail.status].length > 0 && (
                 <DialogFooter className="gap-2">
@@ -450,8 +454,8 @@ export default function Sections() {
       <AlertDialog open={!!confirmStatus} onOpenChange={(o) => { if (!o) setConfirmStatus(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{confirmStatus?.status === 'Completed' ? t('sections.markComplete') : t('sections.cancelSection')}</AlertDialogTitle>
-            <AlertDialogDescription>{confirmStatus?.section.name}</AlertDialogDescription>
+            <AlertDialogTitle>{confirmStatus?.status === 'InProgress' ? L('بدء الشعبة', 'Start section') : confirmStatus?.status === 'Completed' ? t('sections.markComplete') : t('sections.cancelSection')}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmStatus?.section.name} - {confirmStatus?.status === 'InProgress' ? L('ستُعتبر الدورة قد بدأت. يجب توليد الجلسات أولاً، ويمكن بعدها تسجيل طلاب متأخرين.', 'The course is considered started. Sessions must be generated first. Late students can still enroll.') : confirmStatus?.status === 'Completed' ? L('ستُنهى الشعبة وتتحول كل التسجيلات المؤكدة إلى «مكتملة». لا يمكن التراجع.', 'The section will be finished and all confirmed enrollments become completed. This cannot be undone.') : L('ستُلغى الشعبة وجلساتها المجدولة نهائياً. لا يُسمح بالإلغاء وفيها طلاب مسجلون: ألغِ أو انقل تسجيلاتهم أولاً. لا يمكن التراجع.', 'The section and its scheduled sessions will be cancelled for good. Not allowed while students are enrolled: cancel or transfer their enrollments first. This cannot be undone.')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="min-h-[44px]">{t('common.cancel')}</AlertDialogCancel>
